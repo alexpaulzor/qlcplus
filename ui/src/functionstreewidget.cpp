@@ -34,7 +34,6 @@
 FunctionsTreeWidget::FunctionsTreeWidget(Doc *doc, QWidget *parent) :
     QTreeWidget(parent)
   , m_doc(doc)
-  , m_draggedItem(NULL)
 {
     sortItems(COL_NAME, Qt::AscendingOrder);
 
@@ -76,16 +75,19 @@ void FunctionsTreeWidget::functionChanged(quint32 fid)
     blockSignals(false);
 }
 
-void FunctionsTreeWidget::functionAdded(quint32 fid)
+QTreeWidgetItem *FunctionsTreeWidget::functionAdded(quint32 fid)
 {
     blockSignals(true);
     Function* function = m_doc->function(fid);
     if (function == NULL)
-        return;
+        return NULL;
 
-    QTreeWidgetItem* item = new QTreeWidgetItem(parentItem(function));
+    QTreeWidgetItem* parent = parentItem(function);
+    QTreeWidgetItem* item = new QTreeWidgetItem(parent);
     updateFunctionItem(item, function);
+    function->setPath(parent->text(COL_PATH));
     blockSignals(false);
+    return item;
 }
 
 void FunctionsTreeWidget::updateFunctionItem(QTreeWidgetItem* item, const Function* function)
@@ -107,17 +109,20 @@ QTreeWidgetItem* FunctionsTreeWidget::parentItem(const Function* function)
     if (function->type() == Function::Chaser && qobject_cast<const Chaser*>(function)->isSequence() == true)
     {
         quint32 sid = qobject_cast<const Chaser*>(function)->getBoundSceneID();
-
-        QTreeWidgetItem *sceneTopItem = folderItem("Scene/");
-        if (sceneTopItem != NULL)
+        Function *sceneFunc = m_doc->function(sid);
+        if (sceneFunc != NULL)
         {
-            for (int i = 0; i < sceneTopItem->childCount(); i++)
+            QTreeWidgetItem *sceneTopItem = folderItem(sceneFunc->path());
+            if (sceneTopItem != NULL)
             {
-                QTreeWidgetItem *child = sceneTopItem->child(i);
-                Q_ASSERT(child != NULL);
+                for (int i = 0; i < sceneTopItem->childCount(); i++)
+                {
+                    QTreeWidgetItem *child = sceneTopItem->child(i);
+                    Q_ASSERT(child != NULL);
 
-                if (sid == itemFunctionId(child))
-                    return child;
+                    if (sid == itemFunctionId(child))
+                        return child;
+                }
             }
         }
     }
@@ -140,7 +145,7 @@ QTreeWidgetItem* FunctionsTreeWidget::parentItem(const Function* function)
 
     if (pItem != NULL)
     {
-        qDebug() << "Found item for function:" << function->name() << ", path: " << function->path();
+        //qDebug() << "Found item for function:" << function->name() << ", path: " << function->path();
         return pItem;
     }
 
@@ -260,6 +265,8 @@ void FunctionsTreeWidget::addFolder()
     item->setExpanded(true);
 
     blockSignals(false);
+
+    scrollToItem(folder, QAbstractItemView::PositionAtCenter);
 }
 
 void FunctionsTreeWidget::deleteFolder(QTreeWidgetItem *item)
@@ -399,9 +406,9 @@ void FunctionsTreeWidget::slotUpdateChildrenPath(QTreeWidgetItem *root)
 
 void FunctionsTreeWidget::mousePressEvent(QMouseEvent *event)
 {
-    m_draggedItem = itemAt(event->pos());
-
     QTreeWidget::mousePressEvent(event);
+
+    m_draggedItems = selectedItems(); //itemAt(event->pos());
 }
 
 
@@ -409,7 +416,7 @@ void FunctionsTreeWidget::dropEvent(QDropEvent *event)
 {
     QTreeWidgetItem *dropItem = itemAt(event->pos());
 
-    if (m_draggedItem == NULL || dropItem == NULL)
+    if (m_draggedItems.count() == 0 || dropItem == NULL)
         return;
 
     QVariant var = dropItem->data(COL_NAME, Qt::UserRole + 1);
@@ -419,22 +426,40 @@ void FunctionsTreeWidget::dropEvent(QDropEvent *event)
     int dropType = var.toInt();
     //QString folderName = dropItem->text(COL_PATH);
 
-    quint32 dragFID = m_draggedItem->data(COL_NAME, Qt::UserRole).toUInt();
-    Function *dragFunc = m_doc->function(dragFID);
-    if (dragFunc != NULL && dragFunc->type() == dropType)
+    foreach (QTreeWidgetItem *item, m_draggedItems)
     {
-        QTreeWidget::dropEvent(event);
-        quint32 fid = m_draggedItem->data(COL_NAME, Qt::UserRole).toUInt();
-        Function *func = m_doc->function(fid);
-        if (func != NULL)
-            func->setPath(dropItem->text(COL_PATH));
-    }
-    else
-    {
-        // m_draggedItem is a folder
-        int dragType = m_draggedItem->data(COL_NAME, Qt::UserRole + 1).toInt();
-        if (dragType == dropType)
+        quint32 dragFID = item->data(COL_NAME, Qt::UserRole).toUInt();
+        Function *dragFunc = m_doc->function(dragFID);
+        if (dragFunc != NULL && dragFunc->type() == dropType)
+        {
             QTreeWidget::dropEvent(event);
-        slotItemChanged(m_draggedItem);
+            quint32 fid = item->data(COL_NAME, Qt::UserRole).toUInt();
+            Function *func = m_doc->function(fid);
+            if (func != NULL)
+                func->setPath(dropItem->text(COL_PATH));
+            // if item is a Scene with Sequence children attached,
+            // set the new path of children too
+            if (item->childCount() > 0)
+            {
+                for (int i = 0; i < item->childCount(); i++)
+                {
+                    QTreeWidgetItem *child = item->child(i);
+                    quint32 childFID = child->data(COL_NAME, Qt::UserRole).toUInt();
+                    Function *childFunc = m_doc->function(childFID);
+                    if (childFunc != NULL)
+                        childFunc->setPath(dropItem->text(COL_PATH));
+                }
+            }
+        }
+        else
+        {
+            // m_draggedItem is a folder
+            int dragType = item->data(COL_NAME, Qt::UserRole + 1).toInt();
+            if (dragType == dropType)
+                QTreeWidget::dropEvent(event);
+            slotItemChanged(item);
+        }
     }
+
+    m_draggedItems.clear();
 }

@@ -25,6 +25,7 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QVBoxLayout>
+#include <QFileDialog>
 #include <QCheckBox>
 #include <QSplitter>
 #include <QSettings>
@@ -37,6 +38,7 @@
 #include <QIcon>
 
 #include "functionstreewidget.h"
+#include "functionselection.h"
 #include "collectioneditor.h"
 #include "functionmanager.h"
 #include "rgbmatrixeditor.h"
@@ -59,7 +61,6 @@
 #include "show.h"
 #include "doc.h"
 #include "efx.h"
-#include <QFileDialog>
 
 #define COL_NAME 0
 #define COL_PATH 1
@@ -86,6 +87,7 @@ FunctionManager::FunctionManager(QWidget* parent, Doc* doc)
     , m_addRGBMatrixAction(NULL)
     , m_addScriptAction(NULL)
     , m_addAudioAction(NULL)
+    , m_autostartAction(NULL)
     , m_wizardAction(NULL)
     , m_addFolderAction(NULL)
     , m_cloneAction(NULL)
@@ -157,7 +159,8 @@ void FunctionManager::slotDocLoaded()
         if (chaser->isSequence() && chaser->getBoundSceneID() != Scene::invalidId())
         {
             Function *sceneFunc = m_doc->function(chaser->getBoundSceneID());
-            Q_ASSERT(sceneFunc != NULL);
+            if (sceneFunc == NULL)
+                continue;
 
             Scene *scene = qobject_cast<Scene*>(sceneFunc);
             scene->setChildrenFlag(true);
@@ -280,6 +283,11 @@ void FunctionManager::initActions()
     connect(m_addFolderAction, SIGNAL(triggered(bool)),
             this, SLOT(slotAddFolder()));
 
+    m_autostartAction = new QAction(QIcon(":/autostart.png"),
+                                    tr("Select Startup Function"), this);
+    connect(m_autostartAction, SIGNAL(triggered(bool)),
+            this, SLOT(slotSelectAutostartFunction()));
+
     m_wizardAction = new QAction(QIcon(":/wizard.png"),
                                  tr("Function &Wizard"), this);
     m_wizardAction->setShortcut(QKeySequence("CTRL+W"));
@@ -324,6 +332,7 @@ void FunctionManager::initToolbar()
     m_toolbar->addSeparator();
     m_toolbar->addAction(m_addFolderAction);
     m_toolbar->addSeparator();
+    m_toolbar->addAction(m_autostartAction);
     m_toolbar->addAction(m_wizardAction);
     m_toolbar->addSeparator();
     m_toolbar->addAction(m_cloneAction);
@@ -508,6 +517,20 @@ void FunctionManager::slotAddFolder()
     m_doc->setModified();
 }
 
+void FunctionManager::slotSelectAutostartFunction()
+{
+    FunctionSelection fs(this, m_doc);
+    fs.setMultiSelection(false);
+    fs.showNone(true);
+
+    if (fs.exec() == QDialog::Accepted)
+    {
+        quint32 startID = fs.selection().first();
+        m_doc->setStartupFunction(startID);
+        m_doc->setModified();
+    }
+}
+
 void FunctionManager::slotWizard()
 {
     FunctionWizard fw(this, m_doc);
@@ -589,13 +612,17 @@ void FunctionManager::slotSelectAll()
 void FunctionManager::updateActionStatus()
 {
     bool validSelection = false;
+    m_cloneAction->setEnabled(false);
 
     if (m_tree->selectedItems().isEmpty() == false)
     {
         QTreeWidgetItem *firstItem = m_tree->selectedItems().first();
         quint32 fid = m_tree->itemFunctionId(firstItem);
         if (fid != Function::invalidId())
+        {
+            m_cloneAction->setEnabled(true);
             validSelection = true;
+        }
 
         // check if this is a folder
         if (m_tree->selectedItems().count() == 1 && m_tree->indexOfTopLevelItem(firstItem) < 0)
@@ -610,7 +637,6 @@ void FunctionManager::updateActionStatus()
     {
         /* At least one function has been selected, so
            editing is possible. */
-        m_cloneAction->setEnabled(true);
         m_selectAllAction->setEnabled(true);
         if (m_doc->mode() == Doc::Operate)
             m_deleteAction->setEnabled(false);
@@ -620,7 +646,6 @@ void FunctionManager::updateActionStatus()
     else
     {
         /* No functions selected */
-        m_cloneAction->setEnabled(false);
         m_selectAllAction->setEnabled(false);
         m_deleteAction->setEnabled(false);
     }
@@ -665,7 +690,6 @@ void FunctionManager::initTree()
     Q_ASSERT(m_hsplitter != NULL);
     m_hsplitter->addWidget(m_tree);
 
-    // Add two columns for function and type
     QStringList labels;
     labels << tr("Function"); // << "Path";
     m_tree->setHeaderLabels(labels);
@@ -757,6 +781,8 @@ void FunctionManager::slotTreeContextMenuRequested()
     menu.addAction(m_addCollectionAction);
     menu.addAction(m_addRGBMatrixAction);
     menu.addAction(m_addScriptAction);
+    menu.addSeparator();
+    menu.addAction(m_addFolderAction);
     menu.addSeparator();
     menu.addAction(m_wizardAction);
 

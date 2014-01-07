@@ -63,7 +63,7 @@ public:
 
     void functionChanged(quint32 fid);
 
-    void functionAdded(quint32 fid);
+    QTreeWidgetItem* functionAdded(quint32 fid);
 
     /** Return a suitable parent item for the $function's type */
     QTreeWidgetItem* parentItem(const Function* function);
@@ -112,7 +112,7 @@ protected:
     void dropEvent(QDropEvent *event);
 
 private:
-    QTreeWidgetItem *m_draggedItem;
+    QList<QTreeWidgetItem *>m_draggedItems;
 };
 
 #endif // FUNCTIONSTREEWIDGET_H

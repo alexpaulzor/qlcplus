@@ -68,7 +68,7 @@ public:
      * @param model The fixture definition's model
      * @return A matching fixture definition or NULL if not found
      */
-    const QLCFixtureDef* fixtureDef(const QString& manufacturer,
+    QLCFixtureDef* fixtureDef(const QString& manufacturer,
                                     const QString& model) const;
 
     /**
@@ -90,6 +90,17 @@ public:
     bool addFixtureDef(QLCFixtureDef* fixtureDef);
 
     /**
+     * Store a fixture in the fixtures user data folder
+     * if a fixture with the same name already exists, it
+     * will be overwritten
+     *
+     * @param filename the target fixture file name
+     * @param data the content of a fixture XML data
+     * @return
+     */
+    bool storeFixtureDef(QString filename, QString data);
+
+    /**
      * Load fixture definitions from the given path. Ignores duplicates.
      * Returns true even if $fixturePath doesn't contain any fixtures,
      * if it is still accessible (and exists).
@@ -98,6 +109,15 @@ public:
      * @return true, if the path could be accessed, otherwise false.
      */
     bool load(const QDir& dir);
+
+    /**
+     * Load a map of hardcoded fixture definitions that represent
+     * the minimum information to cache a fixture when it is required
+     *
+     * @param dir The directory to load definitions from.
+     * @return true, if the path could be accessed, otherwise false.
+     */
+    bool loadMap(const QDir& dir);
 
     /**
      * Cleans the contents of the fixture definition cache, deleting

@@ -1,22 +1,3 @@
-/*
-  Q Light Controller
-  singlerandom.js
-
-  Copyright (c) Heikki Junnila
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0.txt
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-*/
-
 // Development tool access
 var testAlgo;
 
@@ -30,10 +11,8 @@ var testAlgo;
     {
         var algo = new Object;
         algo.apiVersion = 1;
-        algo.name = "Single Random";
-        algo.author = "Heikki Junnila";
-        algo.initialized = false;
-        algo.rgb = 0;
+        algo.name = "Random Single";
+        algo.author = "plg";
         algo.width = 0;
         algo.height = 0;
 
@@ -60,10 +39,9 @@ var testAlgo;
 
         /**
          * Create one full map of size($width, $height), where exactly
-         * one cell($sx, $sy) is colored with $rgb. Leave other cells
-         * black (0).
+         * one cell($sx, $sy) is active. Leave other cells black (0).
          */
-        util.createStep = function(width, height, sy, sx, rgb)
+        util.createStep = function(width, height, sy, sx)
         {
             var map = new Array(height);
             for (var y = 0; y < height; y++)
@@ -72,6 +50,27 @@ var testAlgo;
                 for (var x = 0; x < width; x++)
                 {
                     if (sy == y && sx == x)
+                        map[y][x] = 1;
+                    else
+                        map[y][x] = 0;
+                }
+            }
+
+            return map;
+        }
+
+        /**
+         * Create map with the real rgb value (because it now changes at each step)
+         */
+        util.createStepRgb = function(width, height, step, rgb)
+        {
+            var map = new Array(height);
+            for (var y = 0; y < height; y++)
+            {
+                map[y] = new Array(width);
+                for (var x = 0; x < width; x++)
+                {
+                    if (step[y][x] != 0)
                         map[y][x] = rgb;
                     else
                         map[y][x] = 0;
@@ -93,7 +92,8 @@ var testAlgo;
         {
             // Create a new step list only when attributes change to keep the
             // script running with as little extra overhead as possible.
-            if (algo.rgb != rgb || algo.width != width || algo.height != height)
+            // Create a new step list each new iteration of the loop so it does not look repetitive
+            if (algo.width != width || algo.height != height || parseInt(step) == 0)
             {
                 // To ensure that ALL points are included in the steps exactly
                 // once, a list of possible steps is created (from (0,0) to (w-1,h-1)).
@@ -107,7 +107,7 @@ var testAlgo;
                     // in this step.
                     var index = Math.floor(Math.random() * (stepList.length));
                     var yx = stepList[index];
-                    var map = util.createStep(width, height, yx[0], yx[1], rgb);
+                    var map = util.createStep(width, height, yx[0], yx[1]);
                     algo.steps[i] = map;
 
                     // Remove the used item from the list of possible steps so that
@@ -115,12 +115,13 @@ var testAlgo;
                     stepList.splice(index, 1);
                 }
 
-                algo.rgb = rgb;
                 algo.width = width;
                 algo.height = height;
             }
 
-            return algo.steps[step];
+            // refresh with real color
+
+            return util.createStepRgb(width, height, algo.steps[step], rgb);
         }
 
         /**

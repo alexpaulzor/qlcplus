@@ -117,7 +117,6 @@ private:
     void initActions();
     void initToolBar();
     bool handleFileError(QFile::FileError error);
-    void updateFileOpenMenu(QString addRecent);
 
 public slots:
     bool slotFileNew();
@@ -186,6 +185,11 @@ public:
     QString fileName() const;
 
     /**
+     * Update the recent file drop down menu
+     */
+    void updateFileOpenMenu(QString addRecent);
+
+    /**
      * Load workspace contents from a file with the given name.
      *
      * @param fileName The name of the file to load from.
@@ -198,7 +202,7 @@ public:
      *
      * @param doc The XML document to load from.
      */
-    bool loadXML(const QDomDocument& doc);
+    bool loadXML(const QDomDocument& doc, bool goToConsole = false);
 
     /**
      * Save workspace contents to a file with the given name. Changes the

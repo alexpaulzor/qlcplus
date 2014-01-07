@@ -105,6 +105,7 @@ bool Function::copyFrom(const Function* function)
     m_fadeInSpeed = function->fadeInSpeed();
     m_fadeOutSpeed = function->fadeOutSpeed();
     m_duration = function->duration();
+    m_path = function->path(true);
 
     emit changed(m_id);
 
@@ -243,7 +244,7 @@ void Function::setPath(QString path)
 {
     if (path.contains(typeToString(type())))
         path.remove(typeToString(type()) + "/");
-    qDebug() << "Function " << name() << "path set to:" << path;
+    //qDebug() << "Function " << name() << "path set to:" << path;
     m_path = path;
 }
 

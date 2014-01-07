@@ -65,7 +65,6 @@
 
 #define KModeTextOperate QObject::tr("Operate")
 #define KModeTextDesign QObject::tr("Design")
-#define KInputUniverseCount 4
 #define KUniverseCount 4
 
 /*****************************************************************************
@@ -104,7 +103,6 @@ App::App()
     QCoreApplication::setOrganizationName("qlcplus");
     QCoreApplication::setOrganizationDomain("sf.net");
     QCoreApplication::setApplicationName(APPNAME);
-
 }
 
 App::~App()
@@ -187,7 +185,19 @@ void App::init()
         if (size.isValid() == true)
             resize(size);
         else
-            resize(800, 600);
+        {
+            if (QLCFile::isRaspberry())
+            {
+                QRect geometry = qApp->desktop()->availableGeometry();
+                // if we're on a Raspberry Pi, introduce a 5% margin
+                int w = (float)geometry.width() * 0.9;
+                int h = (float)geometry.height() * 0.9;
+                setGeometry((geometry.width() - w) / 2, (geometry.height() - h) / 2,
+                            w, h);
+            }
+            else
+                resize(800, 600);
+        }
 
         QVariant state = settings.value("/workspace/state", Qt::WindowNoState);
         if (state.isValid() == true)
@@ -389,7 +399,8 @@ void App::initDoc()
 
     /* Load user fixtures first so that they override system fixtures */
     m_doc->fixtureDefCache()->load(QLCFixtureDefCache::userDefinitionDirectory());
-    m_doc->fixtureDefCache()->load(QLCFixtureDefCache::systemDefinitionDirectory());
+    //m_doc->fixtureDefCache()->load(QLCFixtureDefCache::systemDefinitionDirectory());
+    m_doc->fixtureDefCache()->loadMap(QLCFixtureDefCache::systemDefinitionDirectory());
 
     /* Load plugins */
     connect(m_doc->ioPluginCache(), SIGNAL(pluginLoaded(const QString&)),
@@ -433,6 +444,8 @@ void App::enableKioskMode()
     // Turn on operate mode
     m_doc->setKiosk(true);
     m_doc->setMode(Doc::Operate);
+    if (VirtualConsole::instance()->checkStartupFunction(m_doc->startupFunction()) == false)
+        m_doc->checkStartupFunction();
 
     // No need for these
     m_tab->removeTab(m_tab->indexOf(FixtureManager::instance()));
@@ -459,6 +472,8 @@ void App::createKioskCloseButton(const QRect& rect)
 void App::slotModeOperate()
 {
     m_doc->setMode(Doc::Operate);
+    if (VirtualConsole::instance()->checkStartupFunction(m_doc->startupFunction()) == false)
+        m_doc->checkStartupFunction();
 }
 
 void App::slotModeDesign()
@@ -724,7 +739,7 @@ void App::updateFileOpenMenu(QString addRecent)
         for (int i = 0; i < menuRecentList.count(); i++)
         {
             settings.setValue(QString("%1%2").arg(SETTINGS_RECENTFILE).arg(i), menuRecentList.at(i));
-            /*QAction* a =*/ m_fileOpenMenu->addAction(menuRecentList.at(i));
+            m_fileOpenMenu->addAction(menuRecentList.at(i));
         }
     }
     else
@@ -1166,7 +1181,7 @@ QFile::FileError App::loadXML(const QString& fileName)
     return retval;
 }
 
-bool App::loadXML(const QDomDocument& doc)
+bool App::loadXML(const QDomDocument& doc, bool goToConsole)
 {
     Q_ASSERT(m_doc != NULL);
 
@@ -1218,11 +1233,23 @@ bool App::loadXML(const QDomDocument& doc)
         node = node.nextSibling();
     }
 
+    if (goToConsole == true)
+        // Force the active window to be Virtual Console
+        setActiveWindow(VirtualConsole::staticMetaObject.className());
+    else
+        // Set the active window to what was saved in the workspace file
+        setActiveWindow(activeWindowName);
+
     // Perform post-load operations
     VirtualConsole::instance()->postLoad();
 
-    // Set the active window to what was saved in the workspace file
-    setActiveWindow(activeWindowName);
+    if (m_doc->errorLog().isEmpty() == false)
+    {
+        QMessageBox msg(QMessageBox::Warning, tr("Warning"),
+                        tr("Some errors occurred while loading the project:") + "\n\n" + m_doc->errorLog(),
+                        QMessageBox::Ok);
+        msg.exec();
+    }
 
     return true;
 }
@@ -1294,5 +1321,5 @@ void App::slotLoadDocFromMemory(QString xmlData)
 
     QDomDocument doc;
     doc.setContent(xmlData);
-    loadXML(doc);
+    loadXML(doc, true);
 }

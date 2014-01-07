@@ -157,11 +157,11 @@ void Fixture_Test::type()
     Fixture fxi(this);
     QCOMPARE(fxi.type(), QString(KXMLFixtureDimmer));
 
-    const QLCFixtureDef* fixtureDef;
+    QLCFixtureDef* fixtureDef;
     fixtureDef = m_doc->fixtureDefCache()->fixtureDef("Martin", "MAC250+");
     QVERIFY(fixtureDef != NULL);
 
-    const QLCFixtureMode* fixtureMode;
+    QLCFixtureMode* fixtureMode;
     fixtureMode = fixtureDef->modes().at(0);
     QVERIFY(fixtureMode != NULL);
 
@@ -216,7 +216,7 @@ void Fixture_Test::fixtureDef()
     QCOMPARE(fxi.tiltLsbChannel(), QLCChannel::invalid());
     QCOMPARE(fxi.masterIntensityChannel(), QLCChannel::invalid());
 
-    const QLCFixtureDef* fixtureDef;
+    QLCFixtureDef* fixtureDef;
     fixtureDef = m_doc->fixtureDefCache()->fixtureDef("Martin", "MAC300");
     Q_ASSERT(fixtureDef != NULL);
 
@@ -224,7 +224,7 @@ void Fixture_Test::fixtureDef()
     QVERIFY(fxi.fixtureDef() == NULL);
     QVERIFY(fxi.fixtureMode() == NULL);
 
-    const QLCFixtureMode* fixtureMode;
+    QLCFixtureMode* fixtureMode;
     fixtureMode = fixtureDef->modes().last();
     Q_ASSERT(fixtureMode != NULL);
 
@@ -267,9 +267,9 @@ void Fixture_Test::fixtureDef()
 void Fixture_Test::channels()
 {
     Fixture fxi(this);
-    const QLCFixtureDef* fixtureDef = m_doc->fixtureDefCache()->fixtureDef("i-Pix", "BB4");
+    QLCFixtureDef* fixtureDef = m_doc->fixtureDefCache()->fixtureDef("i-Pix", "BB4");
     QVERIFY(fixtureDef != NULL);
-    const QLCFixtureMode* fixtureMode = fixtureDef->modes().last();
+    QLCFixtureMode* fixtureMode = fixtureDef->modes().last();
     QVERIFY(fixtureMode != NULL);
     fxi.setFixtureDefinition(fixtureDef, fixtureMode);
 
@@ -302,7 +302,7 @@ void Fixture_Test::loadWrongRoot()
 
     QDomElement root = doc.createElement("Function");
     doc.appendChild(root);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == false);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == false);
 }
 
 void Fixture_Test::loadFixtureDef()
@@ -353,7 +353,7 @@ void Fixture_Test::loadFixtureDef()
     root.appendChild(addr);
 
     Fixture fxi(this);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == true);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == true);
     QVERIFY(fxi.name() == "Foobar");
     QVERIFY(fxi.channels() == 9);
     QVERIFY(fxi.address() == 21);
@@ -410,7 +410,7 @@ void Fixture_Test::loadFixtureDefWrongChannels()
     root.appendChild(addr);
 
     Fixture fxi(this);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == true);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == true);
     QVERIFY(fxi.name() == "Foobar");
     QVERIFY(fxi.channels() == 9);
     QVERIFY(fxi.address() == 21);
@@ -467,7 +467,7 @@ void Fixture_Test::loadDimmer()
     root.appendChild(addr);
 
     Fixture fxi(this);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == true);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == true);
     QVERIFY(fxi.name() == "Foobar");
     QVERIFY(fxi.channels() == 18);
     QVERIFY(fxi.address() == 21);
@@ -524,7 +524,7 @@ void Fixture_Test::loadWrongAddress()
     root.appendChild(addr);
 
     Fixture fxi(this);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == true);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == true);
     QVERIFY(fxi.name() == "Foobar");
     QVERIFY(fxi.channels() == 18);
     QVERIFY(fxi.address() == 0);
@@ -579,7 +579,7 @@ void Fixture_Test::loadWrongUniverse()
     root.appendChild(addr);
 
     Fixture fxi(this);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == true);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == true);
     QVERIFY(fxi.name() == "Foobar");
     QVERIFY(fxi.channels() == 18);
     QVERIFY(fxi.address() == 25);
@@ -634,7 +634,7 @@ void Fixture_Test::loadWrongID()
     root.appendChild(addr);
 
     Fixture fxi(this);
-    QVERIFY(fxi.loadXML(root, m_doc->fixtureDefCache()) == false);
+    QVERIFY(fxi.loadXML(root, m_doc, m_doc->fixtureDefCache()) == false);
 }
 
 void Fixture_Test::loader()
@@ -703,11 +703,11 @@ void Fixture_Test::loader()
 
 void Fixture_Test::save()
 {
-    const QLCFixtureDef* fixtureDef;
+    QLCFixtureDef* fixtureDef;
     fixtureDef = m_doc->fixtureDefCache()->fixtureDef("Martin", "MAC250+");
     Q_ASSERT(fixtureDef != NULL);
 
-    const QLCFixtureMode* fixtureMode;
+    QLCFixtureMode* fixtureMode;
     fixtureMode = fixtureDef->modes().at(0);
     Q_ASSERT(fixtureMode != NULL);
 
@@ -816,11 +816,11 @@ void Fixture_Test::status()
     fxi.setChannels(12);
     info = fxi.status();
 
-    const QLCFixtureDef* fixtureDef;
+    QLCFixtureDef* fixtureDef;
     fixtureDef = m_doc->fixtureDefCache()->fixtureDef("Martin", "MAC250+");
     Q_ASSERT(fixtureDef != NULL);
 
-    const QLCFixtureMode* fixtureMode;
+    QLCFixtureMode* fixtureMode;
     fixtureMode = fixtureDef->modes().at(0);
     Q_ASSERT(fixtureMode != NULL);
 

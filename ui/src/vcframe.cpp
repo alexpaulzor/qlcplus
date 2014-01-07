@@ -404,6 +404,35 @@ void VCFrame::slotSetPage(int pageNum)
     }
 }
 
+/*********************************************************************
+ * Submasters
+ *********************************************************************/
+
+void VCFrame::slotSubmasterValueChanged(qreal value)
+{
+    qDebug() << Q_FUNC_INFO << "val:" << value;
+    VCSlider *submaster = (VCSlider *)sender();
+    QListIterator <VCWidget*> it(this->findChildren<VCWidget*>());
+    while (it.hasNext() == true)
+    {
+        VCWidget* child = it.next();
+        if (child->parent() == this && child != submaster)
+            child->adjustIntensity(value);
+    }
+}
+
+void VCFrame::adjustIntensity(qreal val)
+{
+    QListIterator <VCWidget*> it(this->findChildren<VCWidget*>());
+    while (it.hasNext() == true)
+    {
+        VCWidget* child = it.next();
+        if (child->parent() == this)
+            child->adjustIntensity(val);
+    }
+    VCWidget::adjustIntensity(val);
+}
+
 /*****************************************************************************
  * Key Sequences
  *****************************************************************************/
@@ -489,9 +518,9 @@ VCWidget* VCFrame::createCopy(VCWidget* parent)
     return frame;
 }
 
-bool VCFrame::copyFrom(VCWidget* widget)
+bool VCFrame::copyFrom(const VCWidget* widget)
 {
-    VCFrame* frame = qobject_cast<VCFrame*> (widget);
+    const VCFrame* frame = qobject_cast<const VCFrame*> (widget);
     if (frame == NULL)
         return false;
 
@@ -537,7 +566,8 @@ void VCFrame::editProperties()
                     VCWidget* child = it.next();
                     if (child->page() == 0 && child->parentWidget() == this)
                     {
-                        VCWidget *newWidget = child->createCopy(this);;
+                        VCWidget *newWidget = child->createCopy(this);
+                        newWidget->setID(VirtualConsole::instance()->newWidgetId());
                         newWidget->setPage(pg);
                         newWidget->remapInputSources(pg);
                         newWidget->show();
@@ -778,6 +808,11 @@ bool VCFrame::loadXML(const QDomElement* root)
                 if (multipageMode() == true)
                     addWidgetToPageMap(slider);
                 slider->show();
+                // always connect a slider as it it was a submaster
+                // cause this signal is emitted only when a slider is
+                // a submaster
+                connect(slider, SIGNAL(submasterValueChanged(qreal)),
+                        this, SLOT(slotSubmasterValueChanged(qreal)));
             }
         }
         else if (tag.tagName() == KXMLQLCVCSoloFrame)

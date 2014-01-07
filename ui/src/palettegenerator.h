@@ -1,8 +1,8 @@
 /*
-  Q Light Controller
+  Q Light Controller Plus
   palettegenerator.h
 
-  Copyright (C) Heikki Junnila
+  Copyright (C) Massimo Callegari
 
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -22,12 +22,13 @@
 #ifndef PALETTEGENERATOR_H
 #define PALETTEGENERATOR_H
 
+#include <QObject>
 #include <QString>
 #include <QList>
 #include <QHash>
 
-#include "qlcchannel.h"
-
+class FixtureGroup;
+class RGBMatrix;
 class Fixture;
 class Chaser;
 class Scene;
@@ -50,7 +51,8 @@ public:
         SixteenColors,
         Shutter,
         Gobos,
-        ColourMacro
+        ColourMacro,
+        Animation
     };
 
     enum PaletteSubType
@@ -105,6 +107,7 @@ public:
 
     QList<Scene *> scenes();
     QList<Chaser *> chasers();
+    QList<RGBMatrix *> matrices();
 
     void addToDoc();
 
@@ -117,6 +120,8 @@ private:
                             QString name, bool rgb, PaletteSubType subType);
 
     void createCapabilityScene(QHash<quint32, quint32> chMap, PaletteSubType subType);
+
+    void createRGBMatrices(QHash<quint32, quint32> rgbMap);
 
     void createChaser(QString name);
 
@@ -135,9 +140,11 @@ private:
     PaletteType m_type;
     PaletteSubType m_subType;
     QList <Fixture*> m_fixtures;
+    FixtureGroup *m_fixtureGroup;
     QString m_model;
     QList <Scene*> m_scenes;
     QList <Chaser*> m_chasers;
+    QList <RGBMatrix*> m_matrices;
 };
 
 #endif

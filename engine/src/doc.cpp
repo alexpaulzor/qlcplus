@@ -64,6 +64,7 @@ Doc::Doc(QObject* parent, int outputUniverses, int inputUniverses)
     , m_latestFixtureGroupId(0)
     , m_latestChannelsGroupId(0)
     , m_latestFunctionId(0)
+    , m_startupFunctionId(Function::invalidId())
 {
     Bus::init(this);
     resetModified();
@@ -439,15 +440,16 @@ bool Doc::replaceFixtures(QList<Fixture*> newFixturesList)
         newFixture->setUniverse(fixture->universe());
         if (fixture->fixtureDef() != NULL && fixture->fixtureMode() != NULL)
         {
-            const QLCFixtureDef *def = fixtureDefCache()->fixtureDef(fixture->fixtureDef()->manufacturer(),
-                                                                     fixture->fixtureDef()->model());
-            const QLCFixtureMode *mode = NULL;
+            QLCFixtureDef *def = fixtureDefCache()->fixtureDef(fixture->fixtureDef()->manufacturer(),
+                                                               fixture->fixtureDef()->model());
+            QLCFixtureMode *mode = NULL;
             if (def != NULL)
                 mode = def->mode(fixture->fixtureMode()->name());
             newFixture->setFixtureDefinition(def, mode);
         }
         else
             newFixture->setChannels(fixture->channels());
+        newFixture->setExcludeFadeChannels(fixture->excludeFadeChannels());
         m_fixtures[id] = newFixture;
 
         /* Patch fixture change signals thru Doc */
@@ -848,6 +850,30 @@ quint32 Doc::nextFunctionID()
     return tmpFID;
 }
 
+void Doc::setStartupFunction(quint32 fid)
+{
+    m_startupFunctionId = fid;
+}
+
+quint32 Doc::startupFunction()
+{
+    return m_startupFunctionId;
+}
+
+bool Doc::checkStartupFunction()
+{
+    if (m_mode == Operate && m_startupFunctionId != Function::invalidId())
+    {
+        Function *func = function(m_startupFunctionId);
+        if (func != NULL)
+        {
+            func->start(masterTimer());
+            return true;
+        }
+    }
+    return false;
+}
+
 void Doc::slotFunctionChanged(quint32 fid)
 {
     setModified();
@@ -860,10 +886,19 @@ void Doc::slotFunctionChanged(quint32 fid)
 
 bool Doc::loadXML(const QDomElement& root)
 {
+    m_errorLog = "";
+
     if (root.tagName() != KXMLQLCEngine)
     {
         qWarning() << Q_FUNC_INFO << "Engine node not found";
         return false;
+    }
+
+    if (root.hasAttribute(KXMLQLCStartupFunction))
+    {
+        quint32 sID = root.attribute(KXMLQLCStartupFunction).toUInt();
+        if (sID != Function::invalidId())
+            setStartupFunction(sID);
     }
 
     QDomNode node = root.firstChild();
@@ -916,6 +951,10 @@ bool Doc::saveXML(QDomDocument* doc, QDomElement* wksp_root)
 
     /* Create the master Engine node */
     root = doc->createElement(KXMLQLCEngine);
+    if (startupFunction() != Function::invalidId())
+    {
+        root.setAttribute(KXMLQLCStartupFunction, QString::number(startupFunction()));
+    }
     wksp_root->appendChild(root);
 
     /* Write fixtures into an XML document */
@@ -955,6 +994,20 @@ bool Doc::saveXML(QDomDocument* doc, QDomElement* wksp_root)
     }
 
     return true;
+}
+
+void Doc::appendToErrorLog(QString error)
+{
+    if (m_errorLog.contains(error))
+        return;
+
+    m_errorLog.append(error);
+    m_errorLog.append("\n");
+}
+
+QString Doc::errorLog()
+{
+    return m_errorLog;
 }
 
 void Doc::postLoad()

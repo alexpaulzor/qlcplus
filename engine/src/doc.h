@@ -41,6 +41,7 @@ class AudioCapture;
 class QString;
 
 #define KXMLQLCEngine "Engine"
+#define KXMLQLCStartupFunction "Autostart"
 
 class Doc : public QObject
 {
@@ -458,6 +459,26 @@ public:
      */
     quint32 nextFunctionID();
 
+    /**
+     * Set the ID of a function to start everytime QLC+ goes
+     * in operate mode
+     *
+     * @param fid The ID of the function
+     */
+    void setStartupFunction(quint32 fid);
+
+    /**
+     * Retrieve the QLC+ startup function
+     */
+    quint32 startupFunction();
+
+    /**
+     * Check if a startup function needs to be started.
+     *
+     * @return true if function is started, false if it's not
+     */
+    bool checkStartupFunction();
+
 protected:
     /**
      * Create a new function Id
@@ -495,6 +516,9 @@ protected:
     /** Latest assigned function ID */
     quint32 m_latestFunctionId;
 
+    /** Startup function ID */
+    quint32 m_startupFunctionId;
+
     /*********************************************************************
      * Load & Save
      *********************************************************************/
@@ -516,12 +540,25 @@ public:
      */
     bool saveXML(QDomDocument* doc, QDomElement* wksp_root);
 
+    /**
+     * Append a message to the Doc error log. This can be used to display
+     * errors once a project is loaded.
+     */
+    void appendToErrorLog(QString error);
+
+    /**
+     * Retrieve the error log string, filled during a project load
+     */
+    QString errorLog();
+
 private:
     /**
      * Calls postLoad() for each Function after everything has been loaded
      * to do post-load cleanup & mappings.
      */
     void postLoad();
+
+    QString m_errorLog;
 };
 
 #endif

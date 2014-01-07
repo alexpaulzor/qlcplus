@@ -65,7 +65,6 @@ public:
     /* Check if this is the virtual console's draw area */
     bool isBottomFrame();
 
-
     /*********************************************************************
      * GUI
      *********************************************************************/
@@ -136,6 +135,19 @@ protected:
      *  of pages/widgets to be shown/hidden when page is changed */
     QMap <VCWidget *, int> m_pagesMap;
 
+    /*********************************************************************
+     * Submasters
+     *********************************************************************/
+protected slots:
+    void slotSubmasterValueChanged(qreal value);
+
+    /*********************************************************************
+     * Intensity
+     *********************************************************************/
+public:
+    /** @reimp */
+    void adjustIntensity(qreal val);
+
     /*************************************************************************
      * Key sequences
      *************************************************************************/
@@ -177,7 +189,7 @@ public:
 
 protected:
     /** Copy the contents for this widget from another widget */
-    bool copyFrom(VCWidget* widget);
+    bool copyFrom(const VCWidget* widget);
 
     /*********************************************************************
      * Properties

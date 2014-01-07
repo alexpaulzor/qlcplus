@@ -153,7 +153,7 @@ void printUsage()
     cout << "  -o or --open <file>\t\tOpen the specified workspace file" << endl;
     cout << "  -p or --operate\t\tStart in operate mode" << endl;
     cout << "  -v or --version\t\tPrint version information" << endl;
-    cout << "  -w or --web\t\tEnable remote web access" << endl;
+    cout << "  -w or --web\t\t\tEnable remote web access" << endl;
     cout << endl;
 }
 
@@ -291,7 +291,10 @@ int main(int argc, char** argv)
     app.show();
 
     if (QLCArgs::workspace.isEmpty() == false)
-        app.loadXML(QLCArgs::workspace);
+    {
+        if (app.loadXML(QLCArgs::workspace) == QFile::NoError)
+            app.updateFileOpenMenu(QLCArgs::workspace);
+    }
     if (QLCArgs::operate == true)
         app.slotModeOperate();
     if (QLCArgs::kioskMode == true)

@@ -19,6 +19,8 @@
 
 #include <QDebug>
 
+#include "webaccess.h"
+
 #include "vcaudiotriggers.h"
 #include "virtualconsole.h"
 #include "commonjscss.h"
@@ -26,7 +28,6 @@
 #include "outputpatch.h"
 #include "inputpatch.h"
 #include "qlcconfig.h"
-#include "webaccess.h"
 #include "vccuelist.h"
 #include "outputmap.h"
 #include "inputmap.h"
@@ -92,11 +93,48 @@ WebAccess::WebAccess(Doc *doc, VirtualConsole *vcInstance, QObject *parent) :
 
     // Start the web server.
     m_ctx = mg_start(&m_callbacks, NULL, options);
+
+    connect(m_vc, SIGNAL(loaded()),
+            this, SLOT(slotVCLoaded()));
 }
 
 WebAccess::~WebAccess()
 {
     mg_stop(m_ctx);
+}
+
+QString WebAccess::loadXMLPost(mg_connection *conn, QString &filename)
+{
+    char post_data[POST_DATA_SIZE + 10];
+    QString XMLdata = "";
+    bool done = false;
+
+    while(!done)
+    {
+        int read = mg_read(conn, post_data, POST_DATA_SIZE);
+
+        qDebug() << "POST: received: " << read << "bytes";
+        post_data[read] = '\0';
+
+        QString recv(post_data);
+
+        if (read < POST_DATA_SIZE)
+        {
+            recv.truncate(read);
+            done = true;
+        }
+        XMLdata += recv;
+    }
+
+    //qDebug() << "Complete XML data:\n\n" << XMLdata;
+    int fnameStart = XMLdata.indexOf("filename=") + 10;
+    int fnameEnd = XMLdata.indexOf("\"", fnameStart);
+    filename = XMLdata.mid(fnameStart, fnameEnd - fnameStart);
+
+    XMLdata.remove(0, XMLdata.indexOf("\n\r") + 2);
+    XMLdata.truncate(XMLdata.indexOf("\n\r"));
+
+    return XMLdata;
 }
 
 // This function will be called by mongoose on every new request.
@@ -124,35 +162,18 @@ int WebAccess::beginRequestHandler(mg_connection *conn)
 
   if (QString(ri->uri) == "/loadProject")
   {
-      char post_data[POST_DATA_SIZE];
-      QString projectXML = "";
-      bool done = false;
-
-      while(!done)
-      {
-          int read = mg_read(conn, post_data, sizeof(post_data));
-
-          qDebug() << "POST: received: " << read << "bytes";
-
-          QString recv(post_data);
-
-          if (read < POST_DATA_SIZE)
-          {
-              recv.truncate(read);
-              done = true;
-          }
-          projectXML += recv;
-      }
-
-      projectXML.remove(0, projectXML.indexOf("\n\r") + 2);
-      projectXML.truncate(projectXML.indexOf("\n\r"));
+      QString prjname;
+      QString projectXML = loadXMLPost(conn, prjname);
       qDebug() << "Project XML:\n\n" << projectXML << "\n\n";
 
       QByteArray postReply =
               QString("<html><head>\n<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n"
-              "<script type=\"text/javascript\">\n"
-              " window.location = \"/\"\n"
-              "</script></head></html>").toLatin1();
+              "<script type=\"text/javascript\">\n" WEBSOCKET_JS
+              "</script></head><body style=\"background-color: #45484d;\">"
+              "<div style=\"position: absolute; width: 100%; height: 30px; top: 50%; background-color: #888888;"
+              "text-align: center; font:bold 24px/1.2em sans-serif;\">"
+              + tr("Loading project...") +
+              "</div></body></html>").toLatin1();
       int post_size = postReply.length();
       mg_printf(conn, "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/html\r\n"
@@ -167,6 +188,30 @@ int WebAccess::beginRequestHandler(mg_connection *conn)
   else if (QString(ri->uri) == "/config")
   {
       content = getConfigHTML();
+  }
+  else if (QString(ri->uri) == "/loadFixture")
+  {
+      QString fxName;
+      QString fixtureXML = loadXMLPost(conn, fxName);
+      qDebug() << "Fixture name:" << fxName;
+      qDebug() << "Fixture XML:\n\n" << fixtureXML << "\n\n";
+
+      m_doc->fixtureDefCache()->storeFixtureDef(fxName, fixtureXML);
+
+      QByteArray postReply =
+                    QString("<html><head>\n<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n"
+                    "<script type=\"text/javascript\">\n"
+                    " alert(\"" + tr("Fixture stored and loaded") + "\");"
+                    " window.location = \"/config\"\n"
+                    "</script></head></html>").toLatin1();
+      int post_size = postReply.length();
+      mg_printf(conn, "HTTP/1.1 200 OK\r\n"
+                      "Content-Type: text/html\r\n"
+                      "Content-Length: %d\r\n\r\n"
+                      "%s",
+                      post_size, postReply.data());
+
+      return 1;
   }
   else if (QString(ri->uri) != "/")
       return 1;
@@ -586,11 +631,21 @@ QString WebAccess::getCueListHTML(VCCueList *cue)
                 switch (chaser->fadeInMode())
                 {
                     case Chaser::Common:
-                        str += "<td>" + Function::speedToString(chaser->fadeInSpeed()) + "</td>";
-                        break;
+                    {
+                        if (chaser->fadeInSpeed() == Function::infiniteSpeed())
+                            str += "<td>&#8734;</td>";
+                        else
+                            str += "<td>" + Function::speedToString(chaser->fadeInSpeed()) + "</td>";
+                    }
+                    break;
                     case Chaser::PerStep:
-                        str += "<td>" + Function::speedToString(step.fadeIn) + "</td>";
-                        break;
+                    {
+                        if (step.fadeIn == Function::infiniteSpeed())
+                            str += "<td>&#8734;</td>";
+                        else
+                            str += "<td>" + Function::speedToString(step.fadeIn) + "</td>";
+                    }
+                    break;
                     default:
                     case Chaser::Default:
                         str += "<td></td>";
@@ -603,11 +658,21 @@ QString WebAccess::getCueListHTML(VCCueList *cue)
                 switch (chaser->fadeOutMode())
                 {
                     case Chaser::Common:
-                        str += "<td>" + Function::speedToString(chaser->fadeOutSpeed()) + "</td>";
-                        break;
+                    {
+                        if (chaser->fadeOutSpeed() == Function::infiniteSpeed())
+                            str += "<td>&#8734;</td>";
+                        else
+                            str += "<td>" + Function::speedToString(chaser->fadeOutSpeed()) + "</td>";
+                    }
+                    break;
                     case Chaser::PerStep:
-                        str += "<td>" + Function::speedToString(step.fadeOut) + "</td>";
-                        break;
+                    {
+                        if (step.fadeOut == Function::infiniteSpeed())
+                            str += "<td>&#8734;</td>";
+                        else
+                            str += "<td>" + Function::speedToString(step.fadeOut) + "</td>";
+                    }
+                    break;
                     default:
                     case Chaser::Default:
                         str += "<td></td>";
@@ -616,11 +681,21 @@ QString WebAccess::getCueListHTML(VCCueList *cue)
                 switch (chaser->durationMode())
                 {
                     case Chaser::Common:
-                        str += "<td>" + Function::speedToString(chaser->duration()) + "</td>";
-                        break;
+                    {
+                        if (chaser->duration() == Function::infiniteSpeed())
+                            str += "<td>&#8734;</td>";
+                        else
+                            str += "<td>" + Function::speedToString(chaser->duration()) + "</td>";
+                    }
+                    break;
                     case Chaser::PerStep:
-                        str += "<td>" + Function::speedToString(step.duration) + "</td>";
-                        break;
+                    {
+                        if (step.fadeOut == Function::infiniteSpeed())
+                            str += "<td>&#8734;</td>";
+                        else
+                            str += "<td>" + Function::speedToString(step.duration) + "</td>";
+                    }
+                    break;
                     default:
                     case Chaser::Default:
                         str += "<td></td>";
@@ -705,13 +780,7 @@ QString WebAccess::getVCHTML()
 
     m_CSScode = "<style>\n"
             "body { margin: 0px; }\n"
-
-            "form {\n"
-            " position: absolute;\n"
-            " top: -100px;\n"
-            " visibility: hidden;\n"
-            "}\n\n"
-
+            HIDDEN_FORM_CSS
             CONTROL_BAR_CSS
             BUTTON_BASE_CSS
             BUTTON_SPAN_CSS
@@ -730,9 +799,9 @@ QString WebAccess::getVCHTML()
 
             "<div class=\"controlBar\">\n"
             "<a class=\"button button-blue\" href=\"javascript:document.getElementById('loadTrigger').click();\">\n"
-            "<span>Load project</span></a>\n"
+            "<span>" + tr("Load project") + "</span></a>\n"
 
-            "<a class=\"button button-blue\" href=\"/config\"><span>Configuration</span></a>\n"
+            "<a class=\"button button-blue\" href=\"/config\"><span>" + tr("Configuration") + "</span></a>\n"
 
             "<div class=\"swInfo\">" + QString(APPNAME) + " " + QString(APPVERSION) + "</div>"
             "</div>\n"
@@ -749,38 +818,9 @@ QString WebAccess::getVCHTML()
     return str;
 }
 
-QString WebAccess::getConfigHTML()
+QString WebAccess::getIOConfigHTML()
 {
-
-    m_JScode = "<script language=\"javascript\" type=\"text/javascript\">\n" WEBSOCKET_JS;
-    m_JScode += "function ioChanged(cmd, uni, val)\n"
-            "{\n"
-            " websocket.send(\"QLC+IO|\" + cmd + \"|\" + uni + \"|\" + val);\n"
-            "};\n\n";
-    m_JScode += "</script>\n";
-
-    m_CSScode = "<style>\n"
-            "html { height: 100%; }\n"
-            "body {\n"
-            " margin: 0px;\n"
-            " height: 100%;\n"
-            " background: linear-gradient(to bottom, #45484d 0%, #000000 100%);\n"
-            " background: -webkit-linear-gradient(top, #45484d 0%, #000000 100%);\n"
-            "}\n"
-            CONTROL_BAR_CSS
-            BUTTON_BASE_CSS
-            BUTTON_SPAN_CSS
-            BUTTON_STATE_CSS
-            BUTTON_BLUE_CSS
-            SWINFO_CSS
-            TABLE_CSS
-            "</style>\n";
-
-    QString bodyHTML = "<div class=\"controlBar\">\n"
-                       "<a class=\"button button-blue\" href=\"/\"><span>Back</span></a>\n"
-                       "<div class=\"swInfo\">" + QString(APPNAME) + " " + QString(APPVERSION) + "</div>"
-                       "</div>\n";
-
+    QString html = "";
     InputMap *inMap = m_doc->inputMap();
     OutputMap *outMap = m_doc->outputMap();
 
@@ -812,11 +852,8 @@ QString WebAccess::getConfigHTML()
     feedbackLines.prepend("None, None, -1");
     profiles.prepend("None");
 
-    bodyHTML += "<div style=\"margin: 30px 7% 30px 7%; width: 86%; height: 300px;\" >\n";
-    bodyHTML += "<div style=\"font-family: verdana,arial,sans-serif; font-size:20px; text-align:center; color:#CCCCCC;\">";
-    bodyHTML += "Universes configuration</div><br>\n";
-    bodyHTML += "<table class=\"hovertable\" style=\"width: 100%;\">\n";
-    bodyHTML += "<tr><th>Universe</th><th>Input</th><th>Output</th><th>Feedback</th><th>Profile</th></tr>\n";
+    html += "<table class=\"hovertable\" style=\"width: 100%;\">\n";
+    html += "<tr><th>Universe</th><th>Input</th><th>Output</th><th>Feedback</th><th>Profile</th></tr>\n";
 
     for (int i = 0; i < 4; i++)
     {
@@ -828,55 +865,60 @@ QString WebAccess::getConfigHTML()
         quint32 currentFeedback = outMap->feedbackPatch(i)->output();
         QString currentProfileName = inMap->patch(i)->profileName();
 
-        bodyHTML += "<tr align=center><td>Universe " + QString::number(i+1) + "</td>\n";
-        bodyHTML += "<td><select onchange=\"ioChanged('INPUT', " + QString::number(i) + ", this.value);\">\n";
+        html += "<tr align=center><td>Universe " + QString::number(i+1) + "</td>\n";
+        html += "<td><select onchange=\"ioChanged('INPUT', " + QString::number(i) + ", this.value);\">\n";
         for (int in = 0; in < inputLines.count(); in++)
         {
             QStringList strList = inputLines.at(in).split(",");
             QString selected = "";
             if (currentInputPluginName == strList.at(0) && currentInput == strList.at(2).toUInt())
                 selected = "selected";
-            bodyHTML += "<option value=\"" + QString("%1|%2").arg(strList.at(0)).arg(strList.at(2)) + "\" " + selected + ">" +
+            html += "<option value=\"" + QString("%1|%2").arg(strList.at(0)).arg(strList.at(2)) + "\" " + selected + ">" +
                     QString("[%1] %2").arg(strList.at(0)).arg(strList.at(1)) + "</option>\n";
         }
-        bodyHTML += "</select></td>\n";
-        bodyHTML += "<td><select onchange=\"ioChanged('OUTPUT', " + QString::number(i) + ", this.value);\">\n";
+        html += "</select></td>\n";
+        html += "<td><select onchange=\"ioChanged('OUTPUT', " + QString::number(i) + ", this.value);\">\n";
         for (int in = 0; in < outputLines.count(); in++)
         {
             QStringList strList = outputLines.at(in).split(",");
             QString selected = "";
             if (currentOutputPluginName == strList.at(0) && currentOutput == strList.at(2).toUInt())
                 selected = "selected";
-            bodyHTML += "<option value=\"" + QString("%1|%2").arg(strList.at(0)).arg(strList.at(2)) + "\" " + selected + ">" +
+            html += "<option value=\"" + QString("%1|%2").arg(strList.at(0)).arg(strList.at(2)) + "\" " + selected + ">" +
                     QString("[%1] %2").arg(strList.at(0)).arg(strList.at(1)) + "</option>\n";
         }
-        bodyHTML += "</select></td>\n";
-        bodyHTML += "<td><select onchange=\"ioChanged('FB', " + QString::number(i) + ", this.value);\">\n";
+        html += "</select></td>\n";
+        html += "<td><select onchange=\"ioChanged('FB', " + QString::number(i) + ", this.value);\">\n";
         for (int in = 0; in < feedbackLines.count(); in++)
         {
             QStringList strList = feedbackLines.at(in).split(",");
             QString selected = "";
             if (currentFeedbackPluginName == strList.at(0) && currentFeedback == strList.at(2).toUInt())
                 selected = "selected";
-            bodyHTML += "<option value=\"" + QString("%1|%2").arg(strList.at(0)).arg(strList.at(2)) + "\" " + selected + ">" +
+            html += "<option value=\"" + QString("%1|%2").arg(strList.at(0)).arg(strList.at(2)) + "\" " + selected + ">" +
                     QString("[%1] %2").arg(strList.at(0)).arg(strList.at(1)) + "</option>\n";
         }
-        bodyHTML += "</select></td>\n";
-        bodyHTML += "<td><select onchange=\"ioChanged('PROFILE', " + QString::number(i) + ", this.value);\">\n";
+        html += "</select></td>\n";
+        html += "<td><select onchange=\"ioChanged('PROFILE', " + QString::number(i) + ", this.value);\">\n";
         for (int p = 0; p < profiles.count(); p++)
         {
             QString selected = "";
             if (currentProfileName == profiles.at(p))
                 selected = "selected";
-            bodyHTML += "<option value=\"" + profiles.at(p) + "\" " + selected + ">" + profiles.at(p) + "</option>\n";
+            html += "<option value=\"" + profiles.at(p) + "\" " + selected + ">" + profiles.at(p) + "</option>\n";
         }
-        bodyHTML += "</select></td>\n";
+        html += "</select></td>\n";
 
-        bodyHTML += "</tr>\n";
+        html += "</tr>\n";
     }
-    bodyHTML += "</table>\n";
+    html += "</table>\n";
 
-    // ********************* audio devices ********************
+    return html;
+}
+
+QString WebAccess::getAudioConfigHTML()
+{
+    QString html = "";
     QList<AudioDeviceInfo> devList;
 
 #if defined( __APPLE__) || defined(Q_OS_MAC)
@@ -887,12 +929,9 @@ QString WebAccess::getConfigHTML()
     devList = AudioRendererAlsa::getDevicesInfo();
 #endif
 
-    bodyHTML += "<div style=\"margin: 30px 7% 30px 7%; width: 86%; height: 300px;\" >\n";
-    bodyHTML += "<div style=\"font-family: verdana,arial,sans-serif; font-size:20px; text-align:center; color:#CCCCCC;\">";
-    bodyHTML += "Audio configuration</div><br>\n";
-    bodyHTML += "<table class=\"hovertable\" style=\"width: 100%;\">\n";
-    bodyHTML += "<tr><th>Input</th><th>Output</th></tr>\n";
-    bodyHTML += "<tr align=center>";
+    html += "<table class=\"hovertable\" style=\"width: 100%;\">\n";
+    html += "<tr><th>Input</th><th>Output</th></tr>\n";
+    html += "<tr align=center>";
 
     QString audioInSelect = "<td><select onchange=\"ioChanged('AUDIOIN', this.value);\">\n"
                             "<option value=\"__qlcplusdefault__\">Default device</option>\n";
@@ -922,11 +961,104 @@ QString WebAccess::getConfigHTML()
     }
     audioInSelect += "</select></td>\n";
     audioOutSelect += "</select></td>\n";
-    bodyHTML += audioInSelect + audioOutSelect + "</tr>\n</table>\n";
+    html += audioInSelect + audioOutSelect + "</tr>\n</table>\n";
+
+    return html;
+}
+
+QString WebAccess::getUserFixturesConfigHTML()
+{
+    QString html = "";
+    QDir userFx = QLCFixtureDefCache::userDefinitionDirectory();
+
+    if (userFx.exists() == false || userFx.isReadable() == false)
+        return "";
+
+    //html += "<div style=\"width: 100%; height: " + QString::number(cue->height() - 32) + "px; overflow: scroll;\" >\n";
+    html += "<table class=\"hovertable\" style=\"width: 100%;\">\n";
+    html += "<tr><th>File name</th></tr>\n";
+
+    /* Attempt to read all specified files from the given directory */
+    QStringListIterator it(userFx.entryList());
+    while (it.hasNext() == true)
+    {
+        QString path(it.next());
+
+        if (path.toLower().endsWith(".qxf") == true ||
+            path.toLower().endsWith(".d4"))
+                html += "<tr><td>" + path + "</td></tr>\n";
+    }
+    html += "</table>\n";
+
+    return html;
+}
+
+QString WebAccess::getConfigHTML()
+{
+    m_JScode = "<script language=\"javascript\" type=\"text/javascript\">\n" WEBSOCKET_JS;
+    m_JScode += "function ioChanged(cmd, uni, val)\n"
+            "{\n"
+            " websocket.send(\"QLC+IO|\" + cmd + \"|\" + uni + \"|\" + val);\n"
+            "};\n\n";
+    m_JScode += "</script>\n";
+
+    m_CSScode = "<style>\n"
+            "html { height: 100%; background-color: #111; }\n"
+            "body {\n"
+            " margin: 0px;\n"
+            " background-image: linear-gradient(to bottom, #45484d 0%, #111 100%);\n"
+            " background-image: -webkit-linear-gradient(top, #45484d 0%, #111 100%);\n"
+            "}\n"
+            HIDDEN_FORM_CSS
+            CONTROL_BAR_CSS
+            BUTTON_BASE_CSS
+            BUTTON_SPAN_CSS
+            BUTTON_STATE_CSS
+            BUTTON_BLUE_CSS
+            SWINFO_CSS
+            TABLE_CSS
+            "</style>\n";
+
+    QString bodyHTML = "<form action=\"/loadFixture\" method=\"POST\" enctype=\"multipart/form-data\">\n"
+                       "<input id=\"loadTrigger\" type=\"file\" "
+                       "onchange=\"document.getElementById('submitTrigger').click();\" name=\"qlcfxi\" />\n"
+                       "<input id=\"submitTrigger\" type=\"submit\"/></form>"
+
+                       "<div class=\"controlBar\">\n"
+                       "<a class=\"button button-blue\" href=\"/\"><span>" + tr("Back") + "</span></a>\n"
+                       "<a class=\"button button-blue\" href=\"javascript:document.getElementById('loadTrigger').click();\">\n"
+                        "<span>" + tr("Load fixture") + "</span></a>\n"
+                       "<div class=\"swInfo\">" + QString(APPNAME) + " " + QString(APPVERSION) + "</div>"
+                       "</div>\n";
+
+    // ********************* IO mapping ***********************
+    bodyHTML += "<div style=\"margin: 30px 7% 30px 7%; width: 86%; height: 300px;\" >\n";
+    bodyHTML += "<div style=\"font-family: verdana,arial,sans-serif; font-size:20px; text-align:center; color:#CCCCCC;\">";
+    bodyHTML += tr("Universes configuration") + "</div><br>\n";
+    bodyHTML += getIOConfigHTML();
+
+    // ********************* audio devices ********************
+    bodyHTML += "<div style=\"margin: 30px 7% 30px 7%; width: 86%; height: 300px;\" >\n";
+    bodyHTML += "<div style=\"font-family: verdana,arial,sans-serif; font-size:20px; text-align:center; color:#CCCCCC;\">";
+    bodyHTML += tr("Audio configuration") + "</div><br>\n";
+    bodyHTML += getAudioConfigHTML();
+
+    // **************** User loaded fixtures ******************
+
+    bodyHTML += "<div style=\"margin: 30px 7% 30px 7%; width: 86%; height: 300px;\" >\n";
+    bodyHTML += "<div style=\"font-family: verdana,arial,sans-serif; font-size:20px; text-align:center; color:#CCCCCC;\">";
+    bodyHTML += tr("User loaded fixtures") + "</div><br>\n";
+    bodyHTML += getUserFixturesConfigHTML();
 
     QString str = HTML_HEADER + m_JScode + m_CSScode + "</head>\n<body>\n" + bodyHTML + "</body>\n</html>";
 
     return str;
+}
+
+void WebAccess::slotVCLoaded()
+{
+    QString wsMessage = QString("URL|/");
+    mg_websocket_write(m_conn, WEBSOCKET_OPCODE_TEXT, wsMessage.toLatin1().data(), wsMessage.length());
 }
 
 

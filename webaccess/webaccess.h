@@ -48,6 +48,7 @@ public:
                                char *data, size_t data_len);
 
 private:
+    QString loadXMLPost(struct mg_connection *conn, QString &filename);
     QString getWidgetHTML(VCWidget *widget);
     QString getFrameHTML(VCFrame *frame);
     QString getSoloFrameHTML(VCSoloFrame *frame);
@@ -59,9 +60,14 @@ private:
 
     QString getChildrenHTML(VCWidget *frame);
     QString getVCHTML();
+
+    QString getIOConfigHTML();
+    QString getAudioConfigHTML();
+    QString getUserFixturesConfigHTML();
     QString getConfigHTML();
 
 protected slots:
+    void slotVCLoaded();
     void slotButtonToggled(bool on);
     void slotSliderValueChanged(QString val);
     void slotCueIndexChanged(int idx);

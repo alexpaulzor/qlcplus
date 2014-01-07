@@ -178,10 +178,10 @@ void AudioTriggersConfiguration::updateTreeItem(QTreeWidgetItem *item, int idx)
         btn->setProperty("index", idx);
         m_tree->setItemWidget(item, KColumnAssign, btn);
         connect(btn, SIGNAL(clicked()), this, SLOT(slotWidgetSelectionClicked()));
-        if (bar->m_widget != NULL)
+        if (bar->widget() != NULL)
         {
-            item->setText(KColumnInfo, bar->m_widget->caption());
-            item->setIcon(KColumnInfo, VCWidget::typeToIcon(bar->m_widget->type()));
+            item->setText(KColumnInfo, bar->widget()->caption());
+            item->setIcon(KColumnInfo, VCWidget::typeToIcon(bar->widget()->type()));
         }
         else
             item->setText(KColumnInfo, tr("No widget"));
@@ -190,7 +190,7 @@ void AudioTriggersConfiguration::updateTreeItem(QTreeWidgetItem *item, int idx)
         item->setText(KColumnInfo, tr("Not assigned"));
 
     if (bar->m_type == AudioBar::FunctionBar 
-        || (bar->m_type == AudioBar::VCWidgetBar && ((bar->m_widget == NULL) || bar->m_widget->type() != VCWidget::SliderWidget)))
+        || (bar->m_type == AudioBar::VCWidgetBar && ((bar->widget() == NULL) || bar->widget()->type() != VCWidget::SliderWidget)))
     {
         QSpinBox *minspin = new QSpinBox();
         minspin->setMinimum(5);
@@ -213,7 +213,9 @@ void AudioTriggersConfiguration::updateTreeItem(QTreeWidgetItem *item, int idx)
         m_tree->setItemWidget(item, KColumnMaxThreshold, maxspin);
     }
 
-    if  (bar->m_type == AudioBar::VCWidgetBar && bar->m_widget != NULL && bar->m_widget->type() == VCWidget::SpeedDialWidget)
+    if (bar->m_type == AudioBar::VCWidgetBar
+        && bar->widget() != NULL 
+        && (bar->widget()->type() == VCWidget::SpeedDialWidget || bar->widget()->type() == VCWidget::CueListWidget))
     {
         QSpinBox *divisor = new QSpinBox();
         divisor->setMinimum(1);
@@ -223,7 +225,6 @@ void AudioTriggersConfiguration::updateTreeItem(QTreeWidgetItem *item, int idx)
         divisor->setProperty("index", idx);
         connect(divisor, SIGNAL(valueChanged(int)), this, SLOT(slotDivisorChanged(int)));
         m_tree->setItemWidget(item, KColumnDivisor, divisor);
-
     }
 }
 
@@ -335,12 +336,15 @@ void AudioTriggersConfiguration::slotWidgetSelectionClicked()
         filters.append(VCWidget::SliderWidget);
         filters.append(VCWidget::ButtonWidget);
         filters.append(VCWidget::SpeedDialWidget);
+        filters.append(VCWidget::CueListWidget);
         VCWidgetSelection ws(filters, this);
         if (ws.exec() == QDialog::Rejected)
             return; // User pressed cancel
         AudioBar *bar = m_triggers->getSpectrumBar(prop.toInt());
         if (bar != NULL)
+        {
             bar->attachWidget(ws.getSelectedWidget()->id());
+        }
 
         QTreeWidgetItem *item = NULL;
         if (prop.toInt() == 1000)

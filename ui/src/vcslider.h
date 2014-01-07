@@ -101,7 +101,7 @@ public:
 
 protected:
     /** Copy the contents for this widget from another widget */
-    bool copyFrom(VCWidget* widget);
+    bool copyFrom(const VCWidget* widget);
 
     /*********************************************************************
      * Caption
@@ -117,7 +117,7 @@ public:
     void editProperties();
 
     /*********************************************************************
-     * QLC Mode
+     * QLC+ Mode
      *********************************************************************/
 public slots:
     void slotModeChanged(Doc::Mode mode);
@@ -129,7 +129,8 @@ public:
     enum SliderMode
     {
         Level,
-        Playback
+        Playback,
+        Submaster
     };
 
 public:
@@ -153,7 +154,7 @@ public:
     /**
      * Get the slider's current SliderMode
      */
-    SliderMode sliderMode();
+    SliderMode sliderMode() const;
 
     /**
      * Change the slider's current SliderMode
@@ -177,7 +178,7 @@ public:
     static ValueDisplayStyle stringToValueDisplayStyle(QString style);
 
     void setValueDisplayStyle(ValueDisplayStyle style);
-    ValueDisplayStyle valueDisplayStyle();
+    ValueDisplayStyle valueDisplayStyle() const;
 
 protected:
     ValueDisplayStyle m_valueDisplayStyle;
@@ -263,7 +264,7 @@ public:
      * Get low limit for levels set thru the slider
      *
      */
-    uchar levelLowLimit();
+    uchar levelLowLimit() const;
 
     /**
      * Set high limit for levels set thru the slider
@@ -276,7 +277,7 @@ public:
      * Get high limit for levels set thru the slider
      *
      */
-    uchar levelHighLimit();
+    uchar levelHighLimit() const;
 
 protected:
     /**
@@ -351,6 +352,15 @@ protected:
     QMutex m_playbackValueMutex;
 
     /*********************************************************************
+     * Submaster
+     *********************************************************************/
+protected:
+    qreal m_submasterValue;
+
+signals:
+    void submasterValueChanged(qreal value);
+
+    /*********************************************************************
      * DMXSource
      *********************************************************************/
 public:
@@ -371,7 +381,7 @@ public:
     /**
      * Set the text for the top label
      */
-    void setTopLabelText(const QString& text);
+    void setTopLabelText(int value);
 
     /**
      * Get the text in the top label
@@ -398,7 +408,7 @@ public:
 
     void setWidgetStyle(SliderWidgetStyle mode);
 
-    SliderWidgetStyle widgetStyle();
+    SliderWidgetStyle widgetStyle() const;
 
     QString widgetStyleToString(SliderWidgetStyle style);
 
@@ -447,7 +457,7 @@ public:
     /**
      * Returns the Click & Go type
      */
-    ClickAndGoWidget::ClickAndGo clickAndGoType();
+    ClickAndGoWidget::ClickAndGo clickAndGoType() const;
 
     /**
      * Create or update the Click And Go widget (if applicable)
@@ -482,6 +492,13 @@ protected:
 protected slots:
     /** Called when an external input device produces input data */
     void slotInputValueChanged(quint32 universe, quint32 channel, uchar value);
+
+    /*********************************************************************
+     * Intensity
+     *********************************************************************/
+public:
+    /** @reimp */
+    void adjustIntensity(qreal val);
 
     /*********************************************************************
      * Web access

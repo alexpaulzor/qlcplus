@@ -100,10 +100,11 @@ void EFX_Test::initial()
 void EFX_Test::algorithmNames()
 {
     QStringList list = EFX::algorithmList();
-    QCOMPARE(list.size(), 5);
+    QCOMPARE(list.size(), 6);
     QVERIFY(list.contains("Circle"));
     QVERIFY(list.contains("Eight"));
     QVERIFY(list.contains("Line"));
+    QVERIFY(list.contains("Line2"));
     QVERIFY(list.contains("Diamond"));
     QVERIFY(list.contains("Lissajous"));
 
@@ -135,6 +136,7 @@ void EFX_Test::stringToAlgorithm()
     QCOMPARE(EFX::stringToAlgorithm("Circle"), EFX::Circle);
     QCOMPARE(EFX::stringToAlgorithm("Lissajous"), EFX::Lissajous);
     QCOMPARE(EFX::stringToAlgorithm("Line"), EFX::Line);
+    QCOMPARE(EFX::stringToAlgorithm("Line2"), EFX::Line2);
     QCOMPARE(EFX::stringToAlgorithm("Foobar"), EFX::Circle);
 }
 
@@ -2561,7 +2563,7 @@ void EFX_Test::save()
                 else if (subtag.tagName() == "Intensity")
                 {
                     QCOMPARE(subtag.text().toInt(), expectIntensity);
-                    intensity++;
+                    intensity = true;
                 }
                 else
                 {
@@ -2626,10 +2628,10 @@ void EFX_Test::adjustIntensity()
     /* Basically any fixture with 16bit pan & tilt channels will do, but
        then the exact channel numbers and mode name has to be changed
        below. */
-    const QLCFixtureDef* def = m_doc->fixtureDefCache()->fixtureDef("Martin", "MAC250+");
+    QLCFixtureDef* def = m_doc->fixtureDefCache()->fixtureDef("Martin", "MAC250+");
     QVERIFY(def != NULL);
 
-    const QLCFixtureMode* mode = def->mode("Mode 4");
+    QLCFixtureMode* mode = def->mode("Mode 4");
     QVERIFY(mode != NULL);
 
     Fixture* fxi1 = new Fixture(m_doc);

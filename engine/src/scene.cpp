@@ -26,6 +26,7 @@
 #include "qlcfixturedef.h"
 #include "qlcmacros.h"
 #include "qlcfile.h"
+#include "qlccapability.h"
 
 #include "universearray.h"
 #include "genericfader.h"
@@ -105,10 +106,12 @@ void Scene::setValue(const SceneValue& scv, bool blind, bool checkHTP)
     m_valueListMutex.lock();
     int index = m_values.indexOf(scv);
     if (index == -1)
+    {
         m_values.append(scv);
+        qSort(m_values.begin(), m_values.end());
+    }
     else
         m_values.replace(index, scv);
-    qSort(m_values.begin(), m_values.end());
 
     // if the scene is running, we must
     // update/add the changed channel
@@ -200,6 +203,18 @@ QColor Scene::colorValue(quint32 fxi)
                 case QLCChannel::Yellow: yVal = scv.value; break;
                 case QLCChannel::White: rVal = gVal = bVal = scv.value; found = true; break;
                 default: break;
+            }
+        }
+        else if (channel->group() == QLCChannel::Colour)
+        {
+            QLCCapability *cap = channel->searchCapability(scv.value);
+            if (cap && cap->resourceColor1() != QColor())
+            {
+                QColor col = cap->resourceColor1();
+                rVal = col.red();
+                gVal = col.green();
+                bVal = col.blue();
+                found = true;
             }
         }
 
