@@ -1,5 +1,5 @@
 /*
-  Q Light Controller
+  Q Light Controller Plus
   audio.cpp
 
   Copyright (c) Massimo Callegari
@@ -17,17 +17,13 @@
   limitations under the License.
 */
 
+#include <QCoreApplication>
 #include <QDomDocument>
 #include <QDomElement>
 #include <QDebug>
 #include <QFile>
 
 #include <QMessageBox>
-
-#ifdef QT_PHONON_LIB
-#include <phonon/mediaobject.h>
-#include <phonon/backendcapabilities.h>
-#endif
 
 #include "audiodecoder.h"
 #ifdef HAS_LIBSNDFILE
@@ -39,20 +35,27 @@
 
 #include "audiorenderer.h"
 
-#if defined(__APPLE__) || defined(Q_OS_MAC)
-  //#include "audiorenderer_coreaudio.h"
-  #include "audiorenderer_portaudio.h"
-#elif defined(WIN32) || defined(Q_OS_WIN)
-  #include "audiorenderer_waveout.h"
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+
+ #if defined(__APPLE__) || defined(Q_OS_MAC)
+   #include "audiorenderer_portaudio.h"
+ #elif defined(WIN32) || defined(Q_OS_WIN)
+   #include "audiorenderer_waveout.h"
+ #else
+   #include "audiorenderer_alsa.h"
+ #endif
 #else
-  #include "audiorenderer_alsa.h"
+ #include "audiorenderer_qt.h"
 #endif
+
 #include "audio.h"
 #include "doc.h"
 
 #define KXMLQLCAudioSource "Source"
+#define KXMLQLCAudioDevice "Device"
 #define KXMLQLCAudioStartTime "StartTime"
 #define KXMLQLCAudioColor "Color"
+#define KXMLQLCAudioLocked "Locked"
 
 /*****************************************************************************
  * Initialization
@@ -61,13 +64,12 @@
 Audio::Audio(Doc* doc)
   : Function(doc, Function::Audio)
   , m_doc(doc)
-#ifdef QT_PHONON_LIB
-  , m_object(NULL)
-#endif
   , m_decoder(NULL)
   , m_audio_out(NULL)
+  , m_audioDevice(QString())
   , m_startTime(UINT_MAX)
   , m_color(96, 128, 83)
+  , m_locked(false)
   , m_sourceFileName("")
   , m_audioDuration(0)
 {
@@ -128,9 +130,6 @@ bool Audio::copyFrom(const Function* function)
 QStringList Audio::getCapabilities()
 {
     QStringList cap;
-#ifdef QT_PHONON_LIB
-    return Phonon::BackendCapabilities::availableMimeTypes();
-#endif
 #ifdef HAS_LIBSNDFILE
     cap << AudioDecoderSndFile::getSupportedFormats();
 #endif
@@ -153,7 +152,7 @@ quint32 Audio::getStartTime() const
     return m_startTime;
 }
 
-qint64 Audio::getDuration()
+qint64 Audio::totalDuration()
 {
     return m_audioDuration;
 }
@@ -168,6 +167,16 @@ QColor Audio::getColor()
     return m_color;
 }
 
+void Audio::setLocked(bool locked)
+{
+    m_locked = locked;
+}
+
+bool Audio::isLocked()
+{
+    return m_locked;
+}
+
 bool Audio::setSourceFileName(QString filename)
 {
     if (m_sourceFileName.isEmpty() == false)
@@ -180,12 +189,6 @@ bool Audio::setSourceFileName(QString filename)
         }
     }
 
-#ifdef QT_PHONON_LIB
-    m_object = Phonon::createPlayer(Phonon::MusicCategory,
-                                    Phonon::MediaSource(filename));
-    if (m_object == NULL)
-        return false;
-#endif
     m_sourceFileName = filename;
 
     //QMessageBox::warning(0,"Warning", QString("File complete path: %1").arg(m_sourceFileName));
@@ -195,12 +198,10 @@ bool Audio::setSourceFileName(QString filename)
     else
     {
         setName(tr("File not found"));
+        m_audioDuration = 0;
+        emit changed(id());
         return true;
     }
-
-#ifdef QT_PHONON_LIB
-    connect(m_object, SIGNAL(totalTimeChanged(qint64)), this, SLOT(slotTotalTimeChanged(qint64)));
-#endif
 
 #ifdef HAS_LIBSNDFILE
     m_decoder = new AudioDecoderSndFile(m_sourceFileName);
@@ -212,6 +213,7 @@ bool Audio::setSourceFileName(QString filename)
     else
     {
         m_audioDuration = m_decoder->totalTime();
+        emit changed(id());
         return true;
     }
 #endif
@@ -225,6 +227,7 @@ bool Audio::setSourceFileName(QString filename)
     else
     {
         m_audioDuration = m_decoder->totalTime();
+        emit changed(id());
         return true;
     }
 #endif
@@ -241,6 +244,16 @@ AudioDecoder* Audio::getAudioDecoder()
     return m_decoder;
 }
 
+void Audio::setAudioDevice(QString dev)
+{
+    m_audioDevice = dev;
+}
+
+QString Audio::audioDevice()
+{
+    return m_audioDevice;
+}
+
 void Audio::adjustAttribute(qreal fraction, int attributeIndex)
 {
     if (m_audio_out != NULL && attributeIndex == Intensity)
@@ -250,27 +263,14 @@ void Audio::adjustAttribute(qreal fraction, int attributeIndex)
 
 void Audio::slotEndOfStream()
 {
-#ifdef QT_PHONON_LIB
-    if (m_object != NULL)
-        m_object->stop();
-#endif
     if (m_audio_out != NULL)
     {
         m_audio_out->stop();
-        delete m_audio_out;
+        m_audio_out->deleteLater();
         m_audio_out = NULL;
         m_decoder->seek(0);
     }
-    Function::postRun(NULL, NULL);
-}
-
-void Audio::slotTotalTimeChanged(qint64)
-{
-#ifdef QT_PHONON_LIB
-    m_audioDuration = m_object->totalTime();
-#endif
-    qDebug() << "Audio duration: " << m_audioDuration;
-    emit totalTimeChanged(m_audioDuration);
+    Function::postRun(NULL, QList<Universe *>());
 }
 
 void Audio::slotFunctionRemoved(quint32 fid)
@@ -301,8 +301,8 @@ bool Audio::saveXML(QDomDocument* doc, QDomElement* wksp_root)
     saveXMLSpeed(doc, &root);
 
     QDomElement source = doc->createElement(KXMLQLCAudioSource);
-    source.setAttribute(KXMLQLCAudioStartTime, m_startTime);
-    source.setAttribute(KXMLQLCAudioColor, m_color.name());
+    if (m_audioDevice.isEmpty() == false)
+        source.setAttribute(KXMLQLCAudioDevice, m_audioDevice);
 
     text = doc->createTextNode(m_doc->normalizeComponentPath(m_sourceFileName));
 
@@ -333,10 +333,14 @@ bool Audio::loadXML(const QDomElement& root)
         QDomElement tag = node.toElement();
         if (tag.tagName() == KXMLQLCAudioSource)
         {
+            if (tag.hasAttribute(KXMLQLCAudioDevice))
+                setAudioDevice(tag.attribute(KXMLQLCAudioDevice));
             if (tag.hasAttribute(KXMLQLCAudioStartTime))
-                m_startTime = tag.attribute(KXMLQLCAudioStartTime).toUInt();
+                setStartTime(tag.attribute(KXMLQLCAudioStartTime).toUInt());
             if (tag.hasAttribute(KXMLQLCAudioColor))
-                m_color = QColor(tag.attribute(KXMLQLCAudioColor));
+                setColor(QColor(tag.attribute(KXMLQLCAudioColor)));
+            if (tag.hasAttribute(KXMLQLCAudioLocked))
+                setLocked(true);
             setSourceFileName(m_doc->denormalizeComponentPath(tag.text()));
         }
         else if (tag.tagName() == KXMLQLCFunctionSpeed)
@@ -358,25 +362,23 @@ void Audio::postLoad()
  *********************************************************************/
 void Audio::preRun(MasterTimer* timer)
 {
-#ifdef QT_PHONON_LIB
-    if (m_object != NULL)
-    {
-        m_object->play();
-        return;
-    }
-#endif
     if (m_decoder != NULL)
     {
         m_decoder->seek(elapsed());
         AudioParameters ap = m_decoder->audioParameters();
-#if defined(__APPLE__) || defined(Q_OS_MAC)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+ #if defined(__APPLE__) || defined(Q_OS_MAC)
         //m_audio_out = new AudioRendererCoreAudio();
-        m_audio_out = new AudioRendererPortAudio();
-#elif defined(WIN32) || defined(Q_OS_WIN)
-        m_audio_out = new AudioRendererWaveOut();
+        m_audio_out = new AudioRendererPortAudio(m_audioDevice);
+ #elif defined(WIN32) || defined(Q_OS_WIN)
+        m_audio_out = new AudioRendererWaveOut(m_audioDevice);
+ #else
+        m_audio_out = new AudioRendererAlsa(m_audioDevice);
+ #endif
 #else
-        m_audio_out = new AudioRendererAlsa();
+        m_audio_out = new AudioRendererQt(m_audioDevice);
 #endif
+        m_audio_out->moveToThread(QCoreApplication::instance()->thread());
         m_audio_out->setDecoder(m_decoder);
         m_audio_out->initialize(ap.sampleRate(), ap.channels(), ap.format());
         m_audio_out->setFadeIn(fadeInSpeed());
@@ -388,7 +390,7 @@ void Audio::preRun(MasterTimer* timer)
     Function::preRun(timer);
 }
 
-void Audio::write(MasterTimer* timer, UniverseArray* universes)
+void Audio::write(MasterTimer* timer, QList<Universe *> universes)
 {
     Q_UNUSED(timer)
     Q_UNUSED(universes)
@@ -397,12 +399,12 @@ void Audio::write(MasterTimer* timer, UniverseArray* universes)
 
     if (fadeOutSpeed() != 0)
     {
-        if (getDuration() - elapsed() <= fadeOutSpeed())
+        if (totalDuration() - elapsed() <= fadeOutSpeed())
             m_audio_out->setFadeOut(fadeOutSpeed());
     }
 }
 
-void Audio::postRun(MasterTimer* timer, UniverseArray* universes)
+void Audio::postRun(MasterTimer* timer, QList<Universe*> universes)
 {
     Q_UNUSED(timer)
     Q_UNUSED(universes)

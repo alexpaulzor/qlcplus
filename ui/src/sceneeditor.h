@@ -20,7 +20,6 @@
 #ifndef SCENEEDITOR_H
 #define SCENEEDITOR_H
 
-#include <QPointer>
 #include <QWidget>
 #include <QList>
 #include <QMap>
@@ -40,6 +39,11 @@ class InputMap;
 class QAction;
 class Chaser;
 class Doc;
+class SceneUiState;
+
+/** @addtogroup ui_functions
+ * @{
+ */
 
 class SceneEditor : public QWidget, public Ui_SceneEditor
 {
@@ -65,6 +69,7 @@ private:
 private:
     void init(bool applyValues);
     void setSceneValue(const SceneValue& scv);
+    SceneUiState * sceneUiState();
 
 private:
     bool m_initFinished;
@@ -85,7 +90,9 @@ private slots:
     void slotPaste();
     void slotCopyToAll();
     void slotColorTool();
+    void slotPositionTool();
     QColor slotColorSelectorChanged(const QColor &color);
+    void slotPositionSelectorChanged(const QPointF &position);
     void slotSpeedDialToggle(bool state);
     void slotBlindToggled(bool state);
     void slotRecord();
@@ -95,6 +102,7 @@ private slots:
 
 private:
     bool isColorToolAvailable();
+    bool isPositionToolAvailable();
     void createSpeedDials();
     Chaser* selectedChaser() const;
 
@@ -105,6 +113,7 @@ private:
     QAction* m_pasteAction;
     QAction* m_copyToAllAction;
     QAction* m_colorToolAction;
+    QAction* m_positionToolAction;
     QAction* m_blindAction;
     QAction* m_recordAction;
     QAction* m_speedDialAction;
@@ -137,9 +146,10 @@ private slots:
 
     void slotFadeInChanged(int ms);
     void slotFadeOutChanged(int ms);
+    void slotDialDestroyed(QObject* dial);
 
 private:
-    SpeedDialWidget* m_speedDials;
+    SpeedDialWidget *m_speedDials;
 
     /*********************************************************************
      * Channels groups
@@ -197,5 +207,7 @@ private:
      *  manually selected and copied to clipboard */
     bool m_copyFromSelection;
 };
+
+/** @} */
 
 #endif

@@ -25,6 +25,18 @@
 #include <QList>
 #include <QIcon>
 
+class QFile;
+class QString;
+class QDomDocument;
+class QDomElement;
+class QStringList;
+class QLCCapability;
+class QLCChannel;
+
+/** @addtogroup engine Engine
+ * @{
+ */
+
 #define KXMLQLCChannel          QString("Channel")
 #define KXMLQLCChannelNumber    QString("Number")
 #define KXMLQLCChannelName      QString("Name")
@@ -39,14 +51,6 @@
 #define KQLCChannelRGB       QString("RGB")
 #define KQLCChannelCMY       QString("CMY")
 #define KQLCChannelWhite     QString("White")
-
-class QFile;
-class QString;
-class QDomDocument;
-class QDomElement;
-class QStringList;
-class QLCCapability;
-class QLCChannel;
 
 /**
  * QLCChannel represents one DMX channel with one or more DMX value ranges,
@@ -118,11 +122,20 @@ public:
     /** Get the channel's group as an enum */
     Group group() const;
 
+    /** Get the channel's representation icon */
     QIcon getIconFromGroup(Group grp) const;
+
+    /** Get the channel's icon resource name */
+    QString getIconNameFromGroup(QLCChannel::Group grp) const;
 
 private:
     QPixmap drawIntensity(QColor color, QString str) const;
+
+    /** Create a colored icon for a specific intensity channel */
     QIcon getIntensityIcon() const;
+
+    /** Get the intensity channel color name */
+    QString getIntensityColorCode() const;
 
 protected:
     Group m_group;
@@ -235,5 +248,7 @@ public:
     /** Load channel contents from an XML element */
     bool loadXML(const QDomElement& tag);
 };
+
+/** @} */
 
 #endif

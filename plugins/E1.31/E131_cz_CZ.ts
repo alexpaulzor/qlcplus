@@ -1,78 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.0">
+<TS version="2.0" language="cs_CZ">
 <context>
     <name>ConfigureE131</name>
     <message>
         <location filename="configuree131.ui" line="14"/>
         <source>Configure E1.31 Plugin</source>
-        <translation type="unfinished"></translation>
+        <translation>Konfigurace E1.31 pluginu</translation>
     </message>
     <message>
         <location filename="configuree131.ui" line="24"/>
         <source>Network Mapping</source>
-        <translation type="unfinished"></translation>
+        <translation>Přiřazení sítě</translation>
     </message>
     <message>
         <location filename="configuree131.ui" line="37"/>
         <source>Network</source>
-        <translation type="unfinished"></translation>
+        <translation>Síť</translation>
     </message>
     <message>
         <location filename="configuree131.ui" line="42"/>
         <source>Universe</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="configuree131.cpp" line="76"/>
-        <source>Universe %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Větev</translation>
     </message>
 </context>
 <context>
     <name>E131Plugin</name>
     <message>
-        <location filename="e131plugin.cpp" line="107"/>
+        <location filename="e131plugin.cpp" line="73"/>
         <source>This plugin provides DMX output for devices supporting the E1.31 communication protocol.</source>
-        <translation type="unfinished"></translation>
+        <translation>Tento plugin umožňuje podporu DMX výstupu pro zařízení podporující komunikační protokol E1.31.</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="123"/>
-        <location filename="e131plugin.cpp" line="234"/>
-        <source>%1: [%2] Universe: %3</source>
-        <translation type="unfinished"></translation>
+        <location filename="e131plugin.cpp" line="88"/>
+        <location filename="e131plugin.cpp" line="194"/>
+        <source>%1: %2</source>
+        <translation>%1: %2</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="136"/>
+        <location filename="e131plugin.cpp" line="101"/>
         <source>Output</source>
-        <translation type="unfinished"></translation>
+        <translation>Výstup</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="140"/>
-        <location filename="e131plugin.cpp" line="316"/>
+        <location filename="e131plugin.cpp" line="105"/>
+        <location filename="e131plugin.cpp" line="264"/>
         <source>Status: Not open</source>
-        <translation type="unfinished"></translation>
+        <translation>Stav: Není otevřen</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="143"/>
-        <location filename="e131plugin.cpp" line="319"/>
+        <location filename="e131plugin.cpp" line="108"/>
+        <location filename="e131plugin.cpp" line="267"/>
         <source>Status: Open</source>
-        <translation type="unfinished"></translation>
+        <translation>Stav: Otevřen</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="145"/>
+        <location filename="e131plugin.cpp" line="110"/>
         <source>Packets sent: </source>
-        <translation type="unfinished"></translation>
+        <translation>Odeslané pakety:</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="312"/>
+        <location filename="e131plugin.cpp" line="260"/>
         <source>Input</source>
-        <translation type="unfinished"></translation>
+        <translation>Vstup</translation>
     </message>
     <message>
-        <location filename="e131plugin.cpp" line="321"/>
+        <location filename="e131plugin.cpp" line="269"/>
         <source>Packets received: </source>
-        <translation type="unfinished"></translation>
+        <translation>Přijaté pakety:</translation>
     </message>
 </context>
 </TS>

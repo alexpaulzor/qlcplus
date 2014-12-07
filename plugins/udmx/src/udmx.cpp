@@ -56,10 +56,11 @@ int UDMX::capabilities() const
  * Outputs
  *****************************************************************************/
 
-void UDMX::openOutput(quint32 output)
+bool UDMX::openOutput(quint32 output)
 {
     if (output < quint32(m_devices.size()))
-        m_devices.at(output)->open();
+        return m_devices.at(output)->open();
+    return false;
 }
 
 void UDMX::closeOutput(quint32 output)
@@ -112,10 +113,12 @@ QString UDMX::outputInfo(quint32 output)
     return str;
 }
 
-void UDMX::writeUniverse(quint32 output, const QByteArray& universe)
+void UDMX::writeUniverse(quint32 universe, quint32 output, const QByteArray &data)
 {
+    Q_UNUSED(universe)
+
     if (output < quint32(m_devices.size()))
-        m_devices.at(output)->outputDMX(universe);
+        m_devices.at(output)->outputDMX(data);
 }
 
 void UDMX::rescanDevices()

@@ -39,6 +39,7 @@
 #endif
 
 #include "virtualconsole.h"
+#include "simpledesk.h"
 #include "webaccess.h"
 #include "app.h"
 #include "doc.h"
@@ -70,11 +71,19 @@ namespace QLCArgs
     /** If true, create and run a class to enable a web server for remote controlling */
     bool enableWebAccess = false;
 
+    /** If true, enable a 5% of overscan when in fullscreen mode (Raspberry Only) */
+    bool enableOverscan = false;
+
     /** If not null, defines the place for a close button that in virtual console */
     QRect closeButtonRect = QRect();
 
     /** Debug output level */
     QtMsgType debugLevel = QtSystemMsg;
+
+    /** Log to file flag */
+    bool logToFile = false;
+
+    QFile logFile;
 
 #if defined(WIN32) || defined(__APPLE__)
     /** The debug windows for Windows and OSX */
@@ -90,6 +99,13 @@ void qlcMessageHandler(QtMsgType type, const char* msg)
 {
     if (type >= QLCArgs::debugLevel)
     {
+        if (QLCArgs::logToFile == true && QLCArgs::logFile.isOpen())
+        {
+            QLCArgs::logFile.write(msg);
+            QLCArgs::logFile.write((char *)"\n");
+            QLCArgs::logFile.flush();
+            return;
+        }
 #if defined(WIN32) || defined(__APPLE__)
         if (QLCArgs::dbgBox != NULL)
             QLCArgs::dbgBox->addText(msg);
@@ -107,6 +123,12 @@ void qlcMessageHandler(QtMsgType type, const QMessageLogContext &context, const 
     QByteArray localMsg = msg.toLocal8Bit();
     if (type >= QLCArgs::debugLevel)
     {
+        if (QLCArgs::logToFile == true && QLCArgs::logFile.isOpen())
+        {
+            QLCArgs::logFile.write(localMsg);
+            QLCArgs::logFile.write((char *)"\n");
+            QLCArgs::logFile.flush();
+        }
 #if defined(Q_OS_WIN) || defined(Q_OS_MAC)
         if (QLCArgs::dbgBox != NULL)
             QLCArgs::dbgBox->addText(msg);
@@ -146,6 +168,7 @@ void printUsage()
     cout << "Options:" << endl;
     cout << "  -c or --closebutton <x,y,w,h>\tPlace a close button in virtual console (only when -k is specified)" << endl;
     cout << "  -d or --debug <level>\t\tSet debug output level (0-3, see QtMsgType)" << endl;
+    cout << "  -g or --log\t\tLog debug messages to a file" << endl;
     cout << "  -f or --fullscreen <method>\tStart the application in fullscreen mode (method is either 'normal' or 'resize')" << endl;
     cout << "  -h or --help\t\t\tPrint this help" << endl;
     cout << "  -k or --kiosk\t\t\tEnable kiosk mode (only virtual console in forced operate mode)" << endl;
@@ -191,11 +214,22 @@ bool parseArgs()
             else
                 QLCArgs::debugLevel = QtMsgType(0);
         }
+        else if (arg == "-g" || arg == "--log")
+        {
+            QLCArgs::logToFile = true;
+            QString logFilename = QDir::homePath() + QDir::separator() + "QLC+.log";
+            QLCArgs::logFile.setFileName(logFilename);
+            QLCArgs::logFile.open(QIODevice::Append);
+        }
         else if (arg == "-f" || arg == "--fullscreen")
         {
             QLCArgs::fullScreen = true;
             if (it.hasNext() == true && it.peekNext() == "resize")
                 QLCArgs::fullScreenResize = true;
+        }
+        else if (arg == "-r" || arg == "--overscan")
+        {
+            QLCArgs::enableOverscan = true;
         }
         else if (arg == "-h" || arg == "--help")
         {
@@ -281,12 +315,16 @@ int main(int argc, char** argv)
     App app;
 
 #if defined(WIN32) || defined(__APPLE__)
-    if (QLCArgs::debugLevel < QtSystemMsg)
+    if (QLCArgs::logToFile == false && QLCArgs::debugLevel < QtSystemMsg)
     {
         QLCArgs::dbgBox = new DebugBox(&app);
         QLCArgs::dbgBox->show();
     }
 #endif
+
+    if (QLCArgs::enableOverscan == true)
+        app.enableOverscan();
+
     app.startup();
     app.show();
 
@@ -306,12 +344,15 @@ int main(int argc, char** argv)
 
     if (QLCArgs::enableWebAccess == true)
     {
-        WebAccess *m_webAccess = new WebAccess(app.doc(), VirtualConsole::instance());
+        WebAccess *webAccess = new WebAccess(app.doc(), VirtualConsole::instance(),
+                                               SimpleDesk::instance());
 
-        QObject::connect(m_webAccess, SIGNAL(toggleDocMode()),
+        QObject::connect(webAccess, SIGNAL(toggleDocMode()),
                 &app, SLOT(slotModeToggle()));
-        QObject::connect(m_webAccess, SIGNAL(loadProject(QString)),
+        QObject::connect(webAccess, SIGNAL(loadProject(QString)),
                 &app, SLOT(slotLoadDocFromMemory(QString)));
+        QObject::connect(webAccess, SIGNAL(storeAutostartProject(QString)),
+                &app, SLOT(slotSaveAutostart(QString)));
     }
 
     return qapp.exec();

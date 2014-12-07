@@ -42,6 +42,8 @@
 #include "apputil.h"
 #include "doc.h"
 
+#include "efxuistate.h"
+
 #define SETTINGS_GEOMETRY "efxeditor/geometry"
 
 #define KColumnNumber  0
@@ -51,6 +53,9 @@
 #define KColumnIntensity 4
 
 #define PROPERTY_FIXTURE "fixture"
+
+#define KTabGeneral 0
+#define KTabMovement 1
 
 /*****************************************************************************
  * Initialization
@@ -69,8 +74,22 @@ EFXEditor::EFXEditor(QWidget* parent, EFX* efx, Doc* doc)
 
     setupUi(this);
 
+    connect(m_speedDial, SIGNAL(toggled(bool)),
+            this, SLOT(slotSpeedDialToggle(bool)));
+
     initGeneralPage();
     initMovementPage();
+
+    // Start new (==empty) scenes from the first tab and ones with something in them
+    // on the first fixture page.
+    if (m_tab->count() == 0)
+        slotTabChanged(KTabGeneral);
+    else
+        m_tab->setCurrentIndex(efxUiState()->currentTab());
+
+    /* Tab widget */
+    connect(m_tab, SIGNAL(currentChanged(int)),
+            this, SLOT(slotTabChanged(int)));
 
     // Used for intensity changes
     m_testTimer.setSingleShot(true);
@@ -78,7 +97,7 @@ EFXEditor::EFXEditor(QWidget* parent, EFX* efx, Doc* doc)
     connect(&m_testTimer, SIGNAL(timeout()), this, SLOT(slotRestartTest()));
     connect(m_doc, SIGNAL(modeChanged(Doc::Mode)), this, SLOT(slotModeChanged(Doc::Mode)));
 
-    createSpeedDials();
+    updateSpeedDials();
 
     // Set focus to the editor
     m_nameEdit->setFocus();
@@ -90,17 +109,22 @@ EFXEditor::~EFXEditor()
         m_efx->stopAndWait();
 }
 
+void EFXEditor::stopTest()
+{
+    if (m_testButton->isChecked() == true)
+        m_testButton->click();
+}
+
 void EFXEditor::slotFunctionManagerActive(bool active)
 {
     if (active == true)
     {
-        if (m_speedDials == NULL)
-            createSpeedDials();
+        updateSpeedDials();
     }
     else
     {
         if (m_speedDials != NULL)
-            delete m_speedDials;
+            m_speedDials->deleteLater();
         m_speedDials = NULL;
     }
 }
@@ -307,9 +331,14 @@ void EFXEditor::slotModeChanged(Doc::Mode mode)
     }
 }
 
+void EFXEditor::slotTabChanged(int tab)
+{
+    efxUiState()->setCurrentTab(tab);
+}
+
 bool EFXEditor::interruptRunning()
 {
-    if (m_efx->stopped() == false)
+    if (m_testButton->isChecked() == true)
     {
         m_efx->stopAndWait();
         m_testButton->setChecked(false);
@@ -330,6 +359,11 @@ void EFXEditor::continueRunning(bool running)
         else
             m_testButton->click();
     }
+}
+
+EfxUiState * EFXEditor::efxUiState()
+{
+    return qobject_cast<EfxUiState*>(m_efx->uiState());
 }
 
 /*****************************************************************************
@@ -503,28 +537,62 @@ void EFXEditor::removeFixtureItem(EFXFixture* ef)
     m_tree->resizeColumnToContents(KColumnIntensity);
 }
 
+void EFXEditor::slotDialDestroyed(QObject *)
+{
+    m_speedDial->setChecked(false);
+}
+
 void EFXEditor::createSpeedDials()
 {
-    Q_ASSERT(m_speedDials == NULL);
-    m_speedDials = new SpeedDialWidget(this);
-    m_speedDials->setWindowTitle(m_efx->name());
+    if (m_speedDials == NULL)
+    {
+        m_speedDials = new SpeedDialWidget(this);
+        m_speedDials->setAttribute(Qt::WA_DeleteOnClose);
+        connect(m_speedDials, SIGNAL(fadeInChanged(int)), this, SLOT(slotFadeInChanged(int)));
+        connect(m_speedDials, SIGNAL(fadeOutChanged(int)), this, SLOT(slotFadeOutChanged(int)));
+        connect(m_speedDials, SIGNAL(holdChanged(int)), this, SLOT(slotHoldChanged(int)));
+        connect(m_speedDials, SIGNAL(holdTapped()), this, SLOT(slotDurationTapped()));
+        connect(m_speedDials, SIGNAL(destroyed(QObject*)), this, SLOT(slotDialDestroyed(QObject*)));
+    }
+
     m_speedDials->show();
+}
+
+void EFXEditor::updateSpeedDials()
+{
+   if (m_speedDial->isChecked() == false)
+        return;
+
+    createSpeedDials();
+
+    m_speedDials->setWindowTitle(m_efx->name());
     m_speedDials->setFadeInSpeed(m_efx->fadeInSpeed());
     m_speedDials->setFadeOutSpeed(m_efx->fadeOutSpeed());
     if ((int)m_efx->duration() < 0)
         m_speedDials->setDuration(m_efx->duration());
     else
         m_speedDials->setDuration(m_efx->duration() - m_efx->fadeInSpeed() - m_efx->fadeOutSpeed());
-    connect(m_speedDials, SIGNAL(fadeInChanged(int)), this, SLOT(slotFadeInChanged(int)));
-    connect(m_speedDials, SIGNAL(fadeOutChanged(int)), this, SLOT(slotFadeOutChanged(int)));
-    connect(m_speedDials, SIGNAL(holdChanged(int)), this, SLOT(slotHoldChanged(int)));
-    connect(m_speedDials, SIGNAL(durationTapped()), this, SLOT(slotDurationTapped()));
 }
 
 void EFXEditor::slotNameEdited(const QString &text)
 {
     m_efx->setName(text);
-    m_speedDials->setWindowTitle(text);
+    if (m_speedDials)
+        m_speedDials->setWindowTitle(text);
+}
+
+void EFXEditor::slotSpeedDialToggle(bool state)
+{
+    efxUiState()->setShowSpeedDial(state);
+
+    if (state == true)
+        updateSpeedDials();
+    else
+    {
+        if (m_speedDials != NULL)
+            m_speedDials->deleteLater();
+        m_speedDials = NULL;
+    }
 }
 
 void EFXEditor::slotFixtureItemChanged(QTreeWidgetItem* item, int column)

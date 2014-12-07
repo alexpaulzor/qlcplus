@@ -23,11 +23,19 @@
 #include <QGraphicsEllipseItem>
 #include <QColor>
 
-class RGBItem : public QGraphicsEllipseItem
+/** @addtogroup ui_functions
+ * @{
+ */
+
+/************************************************************************
+ * RGB Circle Item
+ ************************************************************************/
+
+class RGBCircleItem : public QGraphicsEllipseItem
 {
 public:
-    RGBItem(QGraphicsItem* parent = 0);
-    ~RGBItem();
+    RGBCircleItem(QGraphicsItem* parent = 0);
+    ~RGBCircleItem() { }
 
     void setColor(QRgb rgb);
     QRgb color() const;
@@ -39,5 +47,28 @@ private:
     QColor m_oldColor;
     uint m_elapsed;
 };
+
+/************************************************************************
+ * RGB Rect Item
+ ************************************************************************/
+
+class RGBRectItem : public QGraphicsRectItem
+{
+public:
+    RGBRectItem(QGraphicsItem* parent = 0);
+    ~RGBRectItem() { }
+
+    void setColor(QRgb rgb);
+    QRgb color() const;
+
+    void draw(uint ms);
+
+private:
+    QColor m_color;
+    QColor m_oldColor;
+    uint m_elapsed;
+};
+
+/** @} */
 
 #endif

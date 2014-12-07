@@ -21,7 +21,6 @@
 #define EFXEDITOR_H
 
 #include <QPolygon>
-#include <QPointer>
 #include <QWidget>
 #include <QFrame>
 #include <QTimer>
@@ -34,6 +33,12 @@ class SpeedDialWidget;
 class EFXPreviewArea;
 class Doc;
 
+class EfxUiState;
+
+/** @addtogroup ui_functions
+ * @{
+ */
+
 class EFXEditor : public QWidget, public Ui_EFXEditor
 {
     Q_OBJECT
@@ -45,6 +50,8 @@ class EFXEditor : public QWidget, public Ui_EFXEditor
 public:
     EFXEditor(QWidget* parent, EFX* efx, Doc* doc);
     ~EFXEditor();
+
+    void stopTest();
 
 public slots:
     void slotFunctionManagerActive(bool active);
@@ -66,10 +73,13 @@ private:
         otherwise it is restarted as a normal EFX. */
     void continueRunning(bool running);
 
+    EfxUiState * efxUiState();
+
 private slots:
     void slotTestClicked();
     void slotRestartTest();
     void slotModeChanged(Doc::Mode mode);
+    void slotTabChanged(int tab);
 
 private:
     EFXPreviewArea* m_previewArea;
@@ -89,9 +99,11 @@ private:
     void updateStartOffsetColumn(QTreeWidgetItem* item, EFXFixture* ef);
     void removeFixtureItem(EFXFixture* ef);
     void createSpeedDials();
+    void updateSpeedDials();
 
 private slots:
     void slotNameEdited(const QString &text);
+    void slotSpeedDialToggle(bool state);
     void slotFixtureItemChanged(QTreeWidgetItem* item, int column);
     void slotFixtureIntensityChanged(int intensity);
     void slotFixtureStartOffsetChanged(int intensity);
@@ -107,12 +119,13 @@ private slots:
     void slotFadeInChanged(int ms);
     void slotFadeOutChanged(int ms);
     void slotHoldChanged(int ms);
+    void slotDialDestroyed(QObject* dial);
 
     void slotFixtureRemoved();
     void slotFixtureChanged();
 
 private:
-    QPointer<SpeedDialWidget> m_speedDials;
+    SpeedDialWidget *m_speedDials;
 
     /*********************************************************************
      * Movement page
@@ -142,5 +155,7 @@ private slots:
 private:
     void redrawPreview();
 };
+
+/** @} */
 
 #endif

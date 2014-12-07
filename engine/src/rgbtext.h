@@ -25,7 +25,11 @@
 
 #include "rgbalgorithm.h"
 
-#define KXMLQLCRGBText               "Text"
+/** @addtogroup engine_functions Functions
+ * @{
+ */
+
+#define KXMLQLCRGBText "Text"
 
 class RGBText : public RGBAlgorithm
 {
@@ -109,10 +113,15 @@ public:
     RGBAlgorithm::Type type() const;
 
     /** @reimp */
+    int acceptColors() const;
+
+    /** @reimp */
     bool loadXML(const QDomElement& root);
 
     /** @reimp */
     bool saveXML(QDomDocument* doc, QDomElement* mtx_root) const;
 };
+
+/** @} */
 
 #endif

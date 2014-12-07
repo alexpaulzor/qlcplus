@@ -20,14 +20,11 @@
 #ifndef SIMPLEDESK_H
 #define SIMPLEDESK_H
 
+#include <QScrollArea>
 #include <QModelIndex>
-#include <QPointer>
 #include <QWidget>
 #include <QList>
 #include <QHash>
-#include <QScrollArea>
-
-#define KXMLQLCSimpleDesk "SimpleDesk"
 
 class GrandMasterSlider;
 class SimpleDeskEngine;
@@ -39,6 +36,7 @@ class QDomDocument;
 class QDomElement;
 class QToolButton;
 class SimpleDesk;
+class QTabWidget;
 class QComboBox;
 class QGroupBox;
 class QTreeView;
@@ -47,6 +45,12 @@ class QSpinBox;
 class CueStack;
 class Doc;
 class Cue;
+
+/** @addtogroup ui_simpledesk
+ * @{
+ */
+
+#define KXMLQLCSimpleDesk "SimpleDesk"
 
 class SimpleDesk : public QWidget
 {
@@ -76,21 +80,34 @@ private:
     void initTopSide();
     void initBottomSide();
 
+protected slots:
+    void slotDocChanged();
+
 private:
     static SimpleDesk* s_instance;
     SimpleDeskEngine* m_engine;
     QSplitter* m_splitter;
     Doc* m_doc;
+    bool m_docChanged;
 
     /*********************************************************************
      * Universe controls
      *********************************************************************/
+public:
+    int getSlidersNumber();
+    int getCurrentUniverseIndex();
+    int getCurrentPage();
+    uchar getAbsoluteChannelValue(uint address);
+    void setAbsoluteChannelValue(uint address, uchar value);
+    void resetUniverse();
+
 private:
     void initUniversesCombo();
     void initUniverseSliders();
     void initUniversePager();
     void resetUniverseSliders();
     void initSliderView(bool fullMode);
+    void initChannelGroupsView();
 
 private slots:
     void slotUniversesComboChanged(int index);
@@ -101,7 +118,7 @@ private slots:
     void slotUniverseResetClicked();
     void slotUniverseSliderValueChanged(quint32, quint32, uchar value);
     void slotUpdateUniverseSliders();
-    void slotUniversesWritten(const QByteArray& ua);
+    void slotUniversesWritten(int idx, const QByteArray& ua);
 
 private:
     QGroupBox* m_universeGroup;
@@ -113,9 +130,19 @@ private:
     QToolButton* m_universeResetButton;
     GrandMasterSlider* m_grandMasterSlider;
     QScrollArea* scrollArea;
+    QScrollArea* m_chGroupsArea;
 
+    /**
+     * List holding pointers to the current view sliders.
+     * Their number is always equal to m_channelsPerPage
+     */
     QList <ConsoleChannel*> m_universeSliders;
-    QList <FixtureConsole *> m_consoleList;
+
+    /**
+     * Map of the Fixture ID/FixtureConsole representing
+     * each fixture in the selected universe
+     */
+    QHash <quint32, FixtureConsole *> m_consoleList;
 
     /** Currently selected universe. Basically the index of m_universesCombo */
     int m_currentUniverse;
@@ -141,7 +168,11 @@ private slots:
     void slotPlaybackFlashing(bool enabled);
     void slotPlaybackValueChanged(uchar value);
 
+    /** Called when the user moves a fader of the ChannelGroup console */
+    void slotGroupValueChanged(quint32 groupID, uchar value);
+
 private:
+    QTabWidget* m_tabs;
     QGroupBox* m_playbackGroup;
     QList <PlaybackSlider*> m_playbackSliders;
     uint m_selectedPlayback;
@@ -155,6 +186,7 @@ private:
     void updateCueStackButtons();
     void replaceCurrentCue();
     void updateSpeedDials();
+    void createSpeedDials();
 
     CueStack* currentCueStack() const;
     int currentCueIndex() const;
@@ -168,13 +200,14 @@ private slots:
     void slotNextCueClicked();
     void slotStopCueStackClicked();
     void slotCloneCueStackClicked();
-    void slotEditCueStackClicked();
+    void slotEditCueStackClicked(bool state);
     void slotRecordCueClicked();
     void slotDeleteCueClicked();
 
     void slotFadeInDialChanged(int ms);
     void slotFadeOutDialChanged(int ms);
     void slotHoldDialChanged(int ms);
+    void slotDialDestroyed(QObject *);
     void slotCueNameEdited(const QString& name);
 
 protected:
@@ -193,7 +226,7 @@ private:
     QToolButton* m_editCueStackButton;
     QToolButton* m_recordCueButton;
     QTreeView* m_cueStackView;
-    QPointer<SpeedDialWidget> m_speedDials;
+    SpeedDialWidget *m_speedDials;
     QModelIndex m_cueDeleteIconIndex;
 
     /*********************************************************************
@@ -203,5 +236,7 @@ public:
     bool loadXML(const QDomElement& root);
     bool saveXML(QDomDocument* doc, QDomElement* wksp_root) const;
 };
+
+/** @} */
 
 #endif

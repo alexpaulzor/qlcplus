@@ -24,7 +24,6 @@
 #include <QtXml>
 #include <QDir>
 
-#include "qlcfixturedefcache.h"
 #include "qlcfixturemode.h"
 #include "qlcfixturedef.h"
 #include "qlcfile.h"
@@ -32,6 +31,7 @@
 #include "channelsgroup.h"
 #include "collection.h"
 #include "function.h"
+#include "universe.h"
 #include "fixture.h"
 #include "chaser.h"
 #include "scene.h"
@@ -39,24 +39,31 @@
 #include "efx.h"
 #include "doc.h"
 #include "bus.h"
+#include "rgbscriptscache.h"
 
-#if defined(__APPLE__) || defined(Q_OS_MAC)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+ #if defined(__APPLE__) || defined(Q_OS_MAC)
   #include "audiocapture_portaudio.h"
-#elif defined(WIN32) || defined (Q_OS_WIN)
+ #elif defined(WIN32) || defined (Q_OS_WIN)
   #include "audiocapture_wavein.h"
-#else
+ #else
   #include "audiocapture_alsa.h"
+ #endif
+#else
+ #include "audiocapture_qt.h"
 #endif
 
-Doc::Doc(QObject* parent, int outputUniverses, int inputUniverses)
+Doc::Doc(QObject* parent, int universes)
     : QObject(parent)
     , m_wsPath("")
     , m_fixtureDefCache(new QLCFixtureDefCache)
+    , m_modifiersCache(new QLCModifiersCache)
+    , m_rgbScriptsCache(new RGBScriptsCache(this))
     , m_ioPluginCache(new IOPluginCache(this))
-    , m_outputMap(new OutputMap(this, outputUniverses))
+    , m_ioMap(new InputOutputMap(this, universes))
     , m_masterTimer(new MasterTimer(this))
-    , m_inputMap(new InputMap(this, inputUniverses))
     , m_inputCapture(NULL)
+    , m_monitorProps(NULL)
     , m_mode(Design)
     , m_kiosk(false)
     , m_clipboard(new QLCClipboard(this))
@@ -68,6 +75,7 @@ Doc::Doc(QObject* parent, int outputUniverses, int inputUniverses)
 {
     Bus::init(this);
     resetModified();
+    qsrand(QTime::currentTime().msec());
 }
 
 Doc::~Doc()
@@ -78,17 +86,18 @@ Doc::~Doc()
     clearContents();
 
     if (isKiosk() == false)
-        m_outputMap->saveDefaults();
-    delete m_outputMap;
-    m_outputMap = NULL;
-
-    if (isKiosk() == false)
-        m_inputMap->saveDefaults();
-    delete m_inputMap;
-    m_inputMap = NULL;
+    {
+        // TODO: is this still needed ??
+        //m_ioMap->saveDefaults();
+    }
+    delete m_ioMap;
+    m_ioMap = NULL;
 
     delete m_ioPluginCache;
     m_ioPluginCache = NULL;
+
+    delete m_modifiersCache;
+    m_modifiersCache = NULL;
 
     delete m_fixtureDefCache;
     m_fixtureDefCache = NULL;
@@ -99,6 +108,11 @@ void Doc::clearContents()
     emit clearing();
 
     m_clipboard->resetContents();
+
+    if (m_monitorProps != NULL)
+        m_monitorProps->reset();
+
+    destroyAudioCapture();
 
     // Delete all function instances
     QListIterator <quint32> funcit(m_functions.keys());
@@ -195,14 +209,24 @@ QLCFixtureDefCache* Doc::fixtureDefCache() const
     return m_fixtureDefCache;
 }
 
+QLCModifiersCache* Doc::modifiersCache() const
+{
+    return m_modifiersCache;
+}
+
+RGBScriptsCache* Doc::rgbScriptsCache() const
+{
+    return m_rgbScriptsCache;
+}
+
 IOPluginCache* Doc::ioPluginCache() const
 {
     return m_ioPluginCache;
 }
 
-OutputMap* Doc::outputMap() const
+InputOutputMap* Doc::inputOutputMap() const
 {
-    return m_outputMap;
+    return m_ioMap;
 }
 
 MasterTimer* Doc::masterTimer() const
@@ -210,21 +234,20 @@ MasterTimer* Doc::masterTimer() const
     return m_masterTimer;
 }
 
-InputMap* Doc::inputMap() const
-{
-    return m_inputMap;
-}
-
 AudioCapture *Doc::audioInputCapture()
 {
     if (m_inputCapture == NULL)
     {
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
 #if defined(__APPLE__) || defined(Q_OS_MAC)
         m_inputCapture = new AudioCapturePortAudio();
 #elif defined(WIN32) || defined (Q_OS_WIN)
         m_inputCapture = new AudioCaptureWaveIn();
 #else
         m_inputCapture = new AudioCaptureAlsa();
+#endif
+#else
+        m_inputCapture = new AudioCaptureQt();
 #endif
     }
     return m_inputCapture;
@@ -335,7 +358,7 @@ bool Doc::addFixture(Fixture* fixture, quint32 id)
     else
     {
         fixture->setID(id);
-        m_fixtures[id] = fixture;
+        m_fixtures.insert(id, fixture);
 
         /* Patch fixture change signals thru Doc */
         connect(fixture, SIGNAL(changed(quint32)),
@@ -347,6 +370,31 @@ bool Doc::addFixture(Fixture* fixture, quint32 id)
         {
             m_addresses[i] = id;
         }
+
+        // Add the fixture channels capabilities to the universe they belong
+        QList<Universe *> universes = inputOutputMap()->claimUniverses();
+        int uni = fixture->universe();
+
+        // TODO !!! if a universe for this fixture doesn't exist, add it !!!
+        QList<int> forcedHTP = fixture->forcedHTPChannels();
+        QList<int> forcedLTP = fixture->forcedLTPChannels();
+
+        for (quint32 i = 0 ; i < fixture->channels(); i++)
+        {
+            const QLCChannel* channel(fixture->channel(i));
+            if (forcedHTP.contains(i))
+                universes.at(uni)->setChannelCapability(fixture->address() + i,
+                                                        channel->group(), Universe::HTP);
+            else if (forcedLTP.contains(i))
+                universes.at(uni)->setChannelCapability(fixture->address() + i,
+                                                        channel->group(), Universe::LTP);
+            else
+                universes.at(uni)->setChannelCapability(fixture->address() + i,
+                                                        channel->group());
+            ChannelModifier *mod = fixture->channelModifier(i);
+            universes.at(uni)->setChannelModifier(fixture->address() + i, mod);
+        }
+        inputOutputMap()->releaseUniverses(true);
 
         emit fixtureAdded(id);
         setModified();
@@ -370,6 +418,8 @@ bool Doc::deleteFixture(quint32 id)
             if (it.value() == id)
                 it.remove();
         }
+        if (m_monitorProps != NULL)
+            m_monitorProps->removeFixture(id);
 
         emit fixtureRemoved(id);
         setModified();
@@ -450,7 +500,7 @@ bool Doc::replaceFixtures(QList<Fixture*> newFixturesList)
         else
             newFixture->setChannels(fixture->channels());
         newFixture->setExcludeFadeChannels(fixture->excludeFadeChannels());
-        m_fixtures[id] = newFixture;
+        m_fixtures.insert(id, newFixture);
 
         /* Patch fixture change signals thru Doc */
         connect(newFixture, SIGNAL(changed(quint32)),
@@ -498,25 +548,82 @@ bool Doc::changeFixtureMode(quint32 id, const QLCFixtureMode *mode)
     }
 }
 
+bool Doc::updateFixtureChannelCapabilities(quint32 id, QList<int> forcedHTP, QList<int> forcedLTP)
+{
+    if (m_fixtures.contains(id) == true)
+    {
+        Fixture* fixture = m_fixtures[id];
+        // get exclusive access to the universes list
+        QList<Universe *> universes = inputOutputMap()->claimUniverses();
+        int uni = fixture->universe();
+
+        // Set forced HTP channels
+        if (!forcedHTP.isEmpty())
+        {
+            fixture->setForcedHTPChannels(forcedHTP);
+
+            for(int i = 0; i < forcedHTP.count(); i++)
+            {
+                int chIdx = forcedHTP.at(i);
+                const QLCChannel* channel(fixture->channel(chIdx));
+
+                if (channel->group() == QLCChannel::Intensity)
+                    universes.at(uni)->setChannelCapability(fixture->address() + chIdx,
+                                                            channel->group(),
+                                                            Universe::ChannelType(Universe::HTP | Universe::Intensity));
+                else
+                    universes.at(uni)->setChannelCapability(fixture->address() + chIdx,
+                                                            channel->group(),
+                                                            Universe::HTP);
+            }
+        }
+        // Set forced LTP channels
+        if (!forcedLTP.isEmpty())
+        {
+            fixture->setForcedLTPChannels(forcedLTP);
+
+            for(int i = 0; i < forcedLTP.count(); i++)
+            {
+                int chIdx = forcedLTP.at(i);
+                const QLCChannel* channel(fixture->channel(chIdx));
+                universes.at(uni)->setChannelCapability(fixture->address() + chIdx, channel->group(), Universe::LTP);
+            }
+        }
+
+        // set channels modifiers
+        for (quint32 i = 0; i < fixture->channels(); i++)
+        {
+            ChannelModifier *mod = fixture->channelModifier(i);
+            universes.at(uni)->setChannelModifier(fixture->address() + i, mod);
+        }
+        inputOutputMap()->releaseUniverses(true);
+
+        return true;
+    }
+
+    return false;
+}
+
 QList <Fixture*> Doc::fixtures() const
 {
-    return m_fixtures.values();
+    QMap <quint32, Fixture*> fixturesMap;
+    QHashIterator <quint32, Fixture*> hashIt(m_fixtures);
+    while (hashIt.hasNext())
+    {
+        hashIt.next();
+        fixturesMap.insert(hashIt.key(), hashIt.value());
+    }
+    return fixturesMap.values();
 }
 
 Fixture* Doc::fixture(quint32 id) const
 {
-    if (m_fixtures.contains(id) == true)
-        return m_fixtures[id];
-    else
-        return NULL;
+    return m_fixtures.value(id, NULL);
 }
 
 quint32 Doc::fixtureForAddress(quint32 universeAddress) const
 {
-    if (m_addresses.contains(universeAddress) == true)
-        return m_addresses[universeAddress];
-    else
-        return Fixture::invalidId();
+    return m_addresses.value(universeAddress, Fixture::invalidId());
 }
 
 int Doc::totalPowerConsumption(int& fuzzy) const
@@ -780,6 +887,10 @@ bool Doc::addFunction(Function* func, quint32 id)
         connect(func, SIGNAL(changed(quint32)),
                 this, SLOT(slotFunctionChanged(quint32)));
 
+        // Listen to function name changes
+        connect(func, SIGNAL(nameChanged(quint32)),
+                this, SLOT(slotFunctionNameChanged(quint32)));
+
         // Make the function listen to fixture removals
         connect(this, SIGNAL(fixtureRemoved(quint32)),
                 func, SLOT(slotFixtureRemoved(quint32)));
@@ -880,13 +991,31 @@ void Doc::slotFunctionChanged(quint32 fid)
     emit functionChanged(fid);
 }
 
+void Doc::slotFunctionNameChanged(quint32 fid)
+{
+    setModified();
+    emit functionNameChanged(fid);
+}
+
+/*********************************************************************
+ * Monitor Properties
+ *********************************************************************/
+
+MonitorProperties *Doc::monitorProperties()
+{
+    if (m_monitorProps == NULL)
+        m_monitorProps = new MonitorProperties();
+
+    return m_monitorProps;
+}
+
 /*****************************************************************************
  * Load & Save
  *****************************************************************************/
 
 bool Doc::loadXML(const QDomElement& root)
 {
-    m_errorLog = "";
+    clearErrorLog();
 
     if (root.tagName() != KXMLQLCEngine)
     {
@@ -927,6 +1056,14 @@ bool Doc::loadXML(const QDomElement& root)
             /* LEGACY */
             Bus::instance()->loadXML(tag);
         }
+        else if (tag.tagName() == KXMLIOMap)
+        {
+            m_ioMap->loadXML(tag);
+        }
+        else if (tag.tagName() == KXMLQLCMonitorProperties)
+        {
+            monitorProperties()->loadXML(tag, this);
+        }
         else
         {
             qWarning() << Q_FUNC_INFO << "Unknown engine tag:" << tag.tagName();
@@ -956,6 +1093,8 @@ bool Doc::saveXML(QDomDocument* doc, QDomElement* wksp_root)
         root.setAttribute(KXMLQLCStartupFunction, QString::number(startupFunction()));
     }
     wksp_root->appendChild(root);
+
+    m_ioMap->saveXML(doc, &root);
 
     /* Write fixtures into an XML document */
     QListIterator <Fixture*> fxit(fixtures());
@@ -993,6 +1132,9 @@ bool Doc::saveXML(QDomDocument* doc, QDomElement* wksp_root)
         func->saveXML(doc, &root);
     }
 
+    if (m_monitorProps != NULL)
+        m_monitorProps->saveXML(doc, &root, this);
+
     return true;
 }
 
@@ -1003,6 +1145,11 @@ void Doc::appendToErrorLog(QString error)
 
     m_errorLog.append(error);
     m_errorLog.append("\n");
+}
+
+void Doc::clearErrorLog()
+{
+    m_errorLog = "";
 }
 
 QString Doc::errorLog()

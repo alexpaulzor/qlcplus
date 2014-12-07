@@ -31,15 +31,16 @@
 #define DMX_BREAK 110
 #define DMX_CHANNELS 512
 #define SETTINGS_FREQUENCY "enttecdmxusbopen/frequency"
+#define SETTINGS_CHANNELS "enttecdmxusbopen/channels"
 
 /****************************************************************************
  * Initialization
  ****************************************************************************/
 
 EnttecDMXUSBOpen::EnttecDMXUSBOpen(const QString& serial, const QString& name, const QString& vendor,
-                                   quint32 id, QObject* parent)
+                                   quint32 outputLine, quint32 id, QObject* parent)
     : QThread(parent)
-    , DMXUSBWidget(serial, name, vendor, NULL, id)
+    , DMXUSBWidget(serial, name, vendor, outputLine, id)
     , m_running(false)
     , m_universe(QByteArray(513, 0))
     , m_frequency(30)
@@ -49,6 +50,16 @@ EnttecDMXUSBOpen::EnttecDMXUSBOpen(const QString& serial, const QString& name, c
     QVariant var = settings.value(SETTINGS_FREQUENCY);
     if (var.isValid() == true)
         m_frequency = var.toDouble();
+    QVariant var2 = settings.value(SETTINGS_CHANNELS);
+    if (var2.isValid() == true)
+    {
+        int channels = var2.toInt();
+        if (channels > DMX_CHANNELS || channels <= 0)
+            channels = DMX_CHANNELS;
+        // channels + 1 Because the first byte is always zero
+        // to break a full DMX universe transmission
+        m_universe = QByteArray(channels + 1, 0);
+    }
 }
 
 EnttecDMXUSBOpen::~EnttecDMXUSBOpen()
@@ -65,22 +76,26 @@ DMXUSBWidget::Type EnttecDMXUSBOpen::type() const
  * Open & Close
  ****************************************************************************/
 
-bool EnttecDMXUSBOpen::open()
+bool EnttecDMXUSBOpen::open(quint32 line, bool input)
 {
-    if (DMXUSBWidget::open() == false)
-        return close();
+    Q_UNUSED(input)
+
+    if (DMXUSBWidget::open(line) == false)
+        return close(line);
 
     if (ftdi()->clearRts() == false)
-        return close();
+        return close(line);
 
     start(QThread::TimeCriticalPriority);
     return true;
 }
 
-bool EnttecDMXUSBOpen::close()
+bool EnttecDMXUSBOpen::close(quint32 line, bool input)
 {
+    Q_UNUSED(input)
+
     stop();
-    return DMXUSBWidget::close();
+    return DMXUSBWidget::close(line);
 }
 
 /****************************************************************************
@@ -97,6 +112,9 @@ QString EnttecDMXUSBOpen::additionalInfo() const
     info += QString("<BR>");
     info += QString("<B>%1:</B> %2").arg(QObject::tr("Manufacturer"))
                                          .arg(vendor());
+    info += QString("<BR>");
+    info += QString("<B>%1:</B> %2").arg(tr("DMX Channels"))
+                                    .arg(m_universe.size()-1);
     info += QString("<BR>");
     info += QString("<B>%1:</B> %2Hz").arg(tr("DMX Frame Frequency"))
                                       .arg(m_frequency);
@@ -117,9 +135,12 @@ QString EnttecDMXUSBOpen::additionalInfo() const
  * Thread
  ****************************************************************************/
 
-bool EnttecDMXUSBOpen::writeUniverse(const QByteArray& universe)
+bool EnttecDMXUSBOpen::writeUniverse(quint32 universe, quint32 output, const QByteArray& data)
 {
-    m_universe.replace(1, MIN(universe.size(), m_universe.size()), universe);
+    Q_UNUSED(universe)
+    Q_UNUSED(output)
+
+    m_universe.replace(1, MIN(data.size(), m_universe.size()), data);
     return true;
 }
 

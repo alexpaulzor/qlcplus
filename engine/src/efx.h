@@ -33,6 +33,10 @@ class GenericFader;
 class QString;
 class Fixture;
 
+/** @addtogroup engine_functions Functions
+ * @{
+ */
+
 #define KXMLQLCEFXPropagationMode "PropagationMode"
 #define KXMLQLCEFXPropagationModeParallel "Parallel"
 #define KXMLQLCEFXPropagationModeSerial "Serial"
@@ -58,6 +62,9 @@ class Fixture;
 #define KXMLQLCEFXLineAlgorithmName "Line"
 #define KXMLQLCEFXLine2AlgorithmName "Line2"
 #define KXMLQLCEFXDiamondAlgorithmName "Diamond"
+#define KXMLQLCEFXSquareAlgorithmName "Square"
+#define KXMLQLCEFXSquareChoppyAlgorithmName "SquareChoppy"
+#define KXMLQLCEFXLeafAlgorithmName "Leaf"
 #define KXMLQLCEFXLissajousAlgorithmName "Lissajous"
 
 /**
@@ -98,6 +105,22 @@ public:
     /** Copy the contents for this function from another function */
     bool copyFrom(const Function* function);
 
+    /** Set the duration in milliseconds */
+    virtual void setDuration(uint ms);
+
+    /*********************************************************************
+     * UI State
+     *********************************************************************/
+private:
+    virtual FunctionUiState * createUiState();
+
+    /*********************************************************************
+     * Contents
+     *********************************************************************/
+public:
+    /** Get the EFX total duration in milliseconds */
+    quint32 totalDuration();
+
     /*********************************************************************
      * Algorithm
      *********************************************************************/
@@ -109,6 +132,9 @@ public:
         Line,
         Line2,
         Diamond,
+        Square,
+        SquareChoppy,
+        Leaf,
         Lissajous
     };
 
@@ -559,10 +585,10 @@ public:
     void preRun(MasterTimer* timer);
 
     /** @reimpl */
-    void write(MasterTimer* timer, UniverseArray* universes);
+    void write(MasterTimer* timer, QList<Universe *> universes);
 
     /** @reimpl */
-    void postRun(MasterTimer* timer, UniverseArray* universes);
+    void postRun(MasterTimer* timer, QList<Universe*> universes);
 
     /*********************************************************************
      * Intensity
@@ -571,5 +597,7 @@ public:
     /** @reimp */
     void adjustAttribute(qreal fraction, int attributeIndex = 0);
 };
+
+/** @} */
 
 #endif

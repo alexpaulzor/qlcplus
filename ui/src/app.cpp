@@ -35,6 +35,7 @@
 #include "inputoutputmanager.h"
 #include "functionselection.h"
 #include "functionmanager.h"
+#include "inputoutputmap.h"
 #include "virtualconsole.h"
 #include "fixturemanager.h"
 #include "dmxdumpfactory.h"
@@ -43,14 +44,13 @@
 #include "addresstool.h"
 #include "simpledesk.h"
 #include "docbrowser.h"
-#include "outputmap.h"
-#include "inputmap.h"
 #include "aboutbox.h"
 #include "monitor.h"
 #include "vcframe.h"
 #include "app.h"
 #include "doc.h"
 
+#include "rgbscriptscache.h"
 #include "qlcfixturedefcache.h"
 #include "qlcfixturedef.h"
 #include "qlcconfig.h"
@@ -74,6 +74,7 @@
 App::App()
     : QMainWindow()
     , m_tab(NULL)
+    , m_overscan(false)
     , m_progressDialog(NULL)
     , m_doc(NULL)
 
@@ -90,6 +91,7 @@ App::App()
     , m_controlPanicAction(NULL)
     , m_dumpDmxAction(NULL)
     , m_liveEditAction(NULL)
+    , m_liveEditVirtualConsoleAction(NULL)
 
     , m_helpIndexAction(NULL)
     , m_helpAboutAction(NULL)
@@ -163,6 +165,11 @@ void App::startup()
     setActiveWindow(FixtureManager::staticMetaObject.className());
 }
 
+void App::enableOverscan()
+{
+    m_overscan = true;
+}
+
 void App::init()
 {
     QSettings settings;
@@ -189,9 +196,14 @@ void App::init()
             if (QLCFile::isRaspberry())
             {
                 QRect geometry = qApp->desktop()->availableGeometry();
-                // if we're on a Raspberry Pi, introduce a 5% margin
-                int w = (float)geometry.width() * 0.9;
-                int h = (float)geometry.height() * 0.9;
+                int w = geometry.width();
+                int h = geometry.height();
+                if (m_overscan == true)
+                {
+                    // if we're on a Raspberry Pi, introduce a 5% margin
+                    w = (float)geometry.width() * 0.95;
+                    h = (float)geometry.height() * 0.95;
+                }
                 setGeometry((geometry.width() - w) / 2, (geometry.height() - h) / 2,
                             w, h);
             }
@@ -233,7 +245,7 @@ void App::init()
     m_tab->addTab(w, QIcon(":/input_output.png"), tr("Inputs/Outputs"));
 
     // Listen to blackout changes and toggle m_controlBlackoutAction
-    connect(m_doc->outputMap(), SIGNAL(blackoutChanged(bool)), this, SLOT(slotBlackoutChanged(bool)));
+    connect(m_doc->inputOutputMap(), SIGNAL(blackoutChanged(bool)), this, SLOT(slotBlackoutChanged(bool)));
 
     // Enable/Disable panic button
     connect(m_doc->masterTimer(), SIGNAL(functionListChanged()), this, SLOT(slotRunningFunctionsChanged()));
@@ -295,25 +307,14 @@ void App::closeEvent(QCloseEvent* e)
         return;
     }
 
-    if (m_doc->isModified() == true && m_doc->isKiosk() == false)
+    if (m_doc->isKiosk() == false)
     {
-        result = QMessageBox::information(this, tr("Close"),
-                                          tr("Do you wish to save the current workspace " \
-                                             "before closing the application?"),
-                                          QMessageBox::Yes,
-                                          QMessageBox::No,
-                                          QMessageBox::Cancel);
-
-        if (result == QMessageBox::Yes)
-        {
-            slotFileSave();
-            e->accept();
-        }
-        else if (result == QMessageBox::No)
+        if( saveModifiedDoc(tr("Close"), tr("Do you wish to save the current workspace " \
+                                            "before closing the application?")) == true)
         {
             e->accept();
         }
-        else if (result == QMessageBox::Cancel)
+        else
         {
             e->ignore();
         }
@@ -379,7 +380,8 @@ void App::clearDocument()
     m_doc->clearContents();
     VirtualConsole::instance()->resetContents();
     SimpleDesk::instance()->clearContents();
-    m_doc->outputMap()->resetUniverses();
+    ShowManager::instance()->clearContents();
+    m_doc->inputOutputMap()->resetUniverses();
     setFileName(QString());
     m_doc->resetModified();
 }
@@ -399,8 +401,15 @@ void App::initDoc()
 
     /* Load user fixtures first so that they override system fixtures */
     m_doc->fixtureDefCache()->load(QLCFixtureDefCache::userDefinitionDirectory());
-    //m_doc->fixtureDefCache()->load(QLCFixtureDefCache::systemDefinitionDirectory());
     m_doc->fixtureDefCache()->loadMap(QLCFixtureDefCache::systemDefinitionDirectory());
+
+    /* Load channel modifiers templates */
+    m_doc->modifiersCache()->load(QLCModifiersCache::systemTemplateDirectory(), true);
+    m_doc->modifiersCache()->load(QLCModifiersCache::userTemplateDirectory());
+
+    /* Load RGB scripts */
+    m_doc->rgbScriptsCache()->load(RGBScriptsCache::systemScriptsDirectory());
+    m_doc->rgbScriptsCache()->load(RGBScriptsCache::userScriptsDirectory());
 
     /* Load plugins */
     connect(m_doc->ioPluginCache(), SIGNAL(pluginLoaded(const QString&)),
@@ -408,14 +417,12 @@ void App::initDoc()
     m_doc->ioPluginCache()->load(IOPluginCache::systemPluginDirectory());
 
     /* Restore outputmap settings */
-    Q_ASSERT(m_doc->outputMap() != NULL);
-    m_doc->outputMap()->loadDefaults();
+    Q_ASSERT(m_doc->inputOutputMap() != NULL);
 
     /* Load input plugins & profiles */
-    Q_ASSERT(m_doc->inputMap() != NULL);
-    m_doc->inputMap()->loadProfiles(InputMap::userProfileDirectory());
-    m_doc->inputMap()->loadProfiles(InputMap::systemProfileDirectory());
-    m_doc->inputMap()->loadDefaults();
+    m_doc->inputOutputMap()->loadProfiles(InputOutputMap::userProfileDirectory());
+    m_doc->inputOutputMap()->loadProfiles(InputOutputMap::systemProfileDirectory());
+    m_doc->inputOutputMap()->loadDefaults();
 
     m_doc->masterTimer()->start();
 }
@@ -495,6 +502,7 @@ void App::slotModeDesign()
             m_doc->masterTimer()->stopAllFunctions();
     }
 
+    m_liveEditVirtualConsoleAction->setChecked(false);
     m_doc->setMode(Doc::Design);
 }
 
@@ -514,6 +522,7 @@ void App::slotModeChanged(Doc::Mode mode)
         m_fileNewAction->setEnabled(false);
         m_fileOpenAction->setEnabled(false);
         m_liveEditAction->setEnabled(true);
+        m_liveEditVirtualConsoleAction->setEnabled(true);
 
         m_modeToggleAction->setIcon(QIcon(":/design.png"));
         m_modeToggleAction->setText(tr("Design"));
@@ -525,6 +534,7 @@ void App::slotModeChanged(Doc::Mode mode)
         m_fileNewAction->setEnabled(true);
         m_fileOpenAction->setEnabled(true);
         m_liveEditAction->setEnabled(false);
+        m_liveEditVirtualConsoleAction->setEnabled(false);
 
         m_modeToggleAction->setIcon(QIcon(":/operate.png"));
         m_modeToggleAction->setText(tr("Operate"));
@@ -570,11 +580,16 @@ void App::initActions()
     m_controlBlackoutAction = new QAction(QIcon(":/blackout.png"), tr("Toggle &Blackout"), this);
     m_controlBlackoutAction->setCheckable(true);
     connect(m_controlBlackoutAction, SIGNAL(triggered(bool)), this, SLOT(slotControlBlackout()));
-    m_controlBlackoutAction->setChecked(m_doc->outputMap()->blackout());
+    m_controlBlackoutAction->setChecked(m_doc->inputOutputMap()->blackout());
 
     m_liveEditAction = new QAction(QIcon(":/liveedit.png"), tr("Live edit a function"), this);
     connect(m_liveEditAction, SIGNAL(triggered()), this, SLOT(slotFunctionLiveEdit()));
     m_liveEditAction->setEnabled(false);
+
+    m_liveEditVirtualConsoleAction = new QAction(QIcon(":/liveedit_vc.png"), tr("Toggle Virtual Console Live edit"), this);
+    connect(m_liveEditVirtualConsoleAction, SIGNAL(triggered()), this, SLOT(slotLiveEditVirtualConsole()));
+    m_liveEditVirtualConsoleAction->setCheckable(true);
+    m_liveEditVirtualConsoleAction->setEnabled(false);
 
     m_dumpDmxAction = new QAction(QIcon(":/add_dump.png"), tr("Dump DMX values to a function"), this);
     m_dumpDmxAction->setShortcut(QKeySequence(tr("CTRL+D", "Control|Dump DMX")));
@@ -647,6 +662,7 @@ void App::initToolBar()
     m_toolbar->addWidget(widget);
     m_toolbar->addAction(m_dumpDmxAction);
     m_toolbar->addAction(m_liveEditAction);
+    m_toolbar->addAction(m_liveEditVirtualConsoleAction);
     m_toolbar->addSeparator();
     m_toolbar->addAction(m_controlPanicAction);
     m_toolbar->addSeparator();
@@ -709,6 +725,42 @@ bool App::handleFileError(QFile::FileError error)
     return false;
 }
 
+bool App::saveModifiedDoc(const QString & title, const QString & message)
+{
+    // if it's not modified, there's nothing to save
+    if (m_doc->isModified() == false)
+        return true;
+
+    int result = QMessageBox::warning(this, title,
+                                          message,
+                                          QMessageBox::Yes,
+                                          QMessageBox::No,
+                                          QMessageBox::Cancel);
+    if (result == QMessageBox::Yes)
+    {
+        slotFileSave();
+        // we check whether m_doc is not modified anymore, rather than 
+        // result of slotFileSave() since the latter returns NoError
+        // in cases like when the user pressed cancel in the save dialog
+        if (m_doc->isModified() == false) 
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else if (result == QMessageBox::No)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void App::updateFileOpenMenu(QString addRecent)
 {
     QSettings settings;
@@ -762,40 +814,15 @@ void App::updateFileOpenMenu(QString addRecent)
 
 bool App::slotFileNew()
 {
-    bool result = false;
-
-    if (m_doc->isModified())
+    QString msg(tr("Do you wish to save the current workspace?\n" \
+                   "Changes will be lost if you don't save them."));
+    if (saveModifiedDoc(tr("New Workspace"), msg) == false)
     {
-        QString msg(tr("Do you wish to save the current workspace?\n" \
-                       "Changes will be lost if you don't save them."));
-        int result = QMessageBox::warning(this, tr("New Workspace"),
-                                          msg,
-                                          QMessageBox::Yes,
-                                          QMessageBox::No,
-                                          QMessageBox::Cancel);
-        if (result == QMessageBox::Yes)
-        {
-            slotFileSave();
-            clearDocument();
-            result = true;
-        }
-        else if (result == QMessageBox::No)
-        {
-            clearDocument();
-            result = true;
-        }
-        else
-        {
-            result = false;
-        }
-    }
-    else
-    {
-        clearDocument();
-        result = true;
+        return false;
     }
 
-    return result;
+    clearDocument();
+    return true;
 }
 
 QFile::FileError App::slotFileOpen()
@@ -803,27 +830,12 @@ QFile::FileError App::slotFileOpen()
     QString fn;
 
     /* Check that the user is aware of losing previous changes */
-    if (m_doc->isModified() == true)
+    QString msg(tr("Do you wish to save the current workspace?\n" \
+                   "Changes will be lost if you don't save them."));
+    if (saveModifiedDoc(tr("Open Workspace"), msg) == false)
     {
-        QString msg(tr("Do you wish to save the current workspace?\n" \
-                       "Changes will be lost if you don't save them."));
-        int result = QMessageBox::warning(this, tr("Open Workspace"),
-                                          msg,
-                                          QMessageBox::Yes,
-                                          QMessageBox::No,
-                                          QMessageBox::Cancel);
-        if (result == QMessageBox::Yes)
-        {
-            /* Save first, but don't proceed unless it succeeded. */
-            QFile::FileError error = slotFileSaveAs();
-            if (handleFileError(error) == false)
-                return error;
-        }
-        else if (result == QMessageBox::Cancel)
-        {
-            /* Second thoughts... Cancel loading. */
-            return QFile::NoError;
-        }
+        /* Second thoughts... Cancel loading. */
+        return QFile::NoError;
     }
 
     /* Create a file open dialog */
@@ -880,7 +892,7 @@ QFile::FileError App::slotFileOpen()
     if (FixtureManager::instance() != NULL)
         FixtureManager::instance()->updateView();
     if (InputOutputManager::instance() != NULL)
-        InputOutputManager::instance()->updateTree();
+        InputOutputManager::instance()->updateList();
 
     updateFileOpenMenu(fn);
 
@@ -968,7 +980,7 @@ void App::slotAddressTool()
 
 void App::slotControlBlackout()
 {
-    m_doc->outputMap()->setBlackout(!m_doc->outputMap()->blackout());
+    m_doc->inputOutputMap()->setBlackout(!m_doc->inputOutputMap()->blackout());
 }
 
 void App::slotBlackoutChanged(bool state)
@@ -1019,6 +1031,11 @@ void App::slotFunctionLiveEdit()
             fle.exec();
         }
     }
+}
+
+void App::slotLiveEditVirtualConsole()
+{
+    VirtualConsole::instance()->toggleLiveEdit();
 }
 
 void App::slotControlFullScreen()
@@ -1088,27 +1105,12 @@ void App::slotRecentFileClicked(QAction *recent)
     }
 
     /* Check that the user is aware of losing previous changes */
-    if (m_doc->isModified() == true)
+    QString msg(tr("Do you wish to save the current workspace?\n" \
+                   "Changes will be lost if you don't save them."));
+    if (saveModifiedDoc(tr("Open Workspace"), msg) == false)
     {
-        QString msg(tr("Do you wish to save the current workspace?\n" \
-                       "Changes will be lost if you don't save them."));
-        int result = QMessageBox::warning(this, tr("Open Workspace"),
-                                          msg,
-                                          QMessageBox::Yes,
-                                          QMessageBox::No,
-                                          QMessageBox::Cancel);
-        if (result == QMessageBox::Yes)
-        {
-            /* Save first, but don't proceed unless it succeeded. */
-            QFile::FileError error = slotFileSaveAs();
-            if (handleFileError(error) == false)
-                return;
-        }
-        else if (result == QMessageBox::Cancel)
-        {
-            /* Second thoughts... Cancel loading. */
-            return;
-        }
+        /* Second thoughts... Cancel loading. */
+        return;
     }
 
     m_workingDirectory = QFileInfo(recentAbsPath).absoluteDir();
@@ -1134,7 +1136,7 @@ void App::slotRecentFileClicked(QAction *recent)
     if (FixtureManager::instance() != NULL)
         FixtureManager::instance()->updateView();
     if (InputOutputManager::instance() != NULL)
-        InputOutputManager::instance()->updateTree();
+        InputOutputManager::instance()->updateList();
 
 }
 
@@ -1181,7 +1183,7 @@ QFile::FileError App::loadXML(const QString& fileName)
     return retval;
 }
 
-bool App::loadXML(const QDomDocument& doc, bool goToConsole)
+bool App::loadXML(const QDomDocument& doc, bool goToConsole, bool fromMemory)
 {
     Q_ASSERT(m_doc != NULL);
 
@@ -1243,7 +1245,8 @@ bool App::loadXML(const QDomDocument& doc, bool goToConsole)
     // Perform post-load operations
     VirtualConsole::instance()->postLoad();
 
-    if (m_doc->errorLog().isEmpty() == false)
+    if (m_doc->errorLog().isEmpty() == false &&
+        fromMemory == false)
     {
         QMessageBox msg(QMessageBox::Warning, tr("Warning"),
                         tr("Some errors occurred while loading the project:") + "\n\n" + m_doc->errorLog(),
@@ -1306,8 +1309,6 @@ QFile::FileError App::saveXML(const QString& fileName)
         retval = QFile::ReadError;
     }
 
-    file.close();
-
     return retval;
 }
 
@@ -1321,5 +1322,16 @@ void App::slotLoadDocFromMemory(QString xmlData)
 
     QDomDocument doc;
     doc.setContent(xmlData);
-    loadXML(doc, true);
+    loadXML(doc, true, true);
+}
+
+void App::slotSaveAutostart(QString fileName)
+{
+    /* Set the workspace path before saving the new XML. In this way local files
+       can be loaded even if the workspace file will be moved */
+    m_doc->setWorkspacePath(QFileInfo(fileName).absolutePath());
+
+    /* Save the document and set workspace name */
+    QFile::FileError error = saveXML(fileName);
+    handleFileError(error);
 }

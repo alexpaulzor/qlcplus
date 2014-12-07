@@ -27,17 +27,14 @@
 #include <QHash>
 #include <QFile>
 
-//#include <artnet/artnet.h>
-
 #include "qlcioplugin.h"
 #include "artnetcontroller.h"
 
 typedef struct
 {
     QString IPAddress;
-    int port;
+    QString MACAddress;
     ArtNetController* controller;
-    ArtNetController::Type type;
 } ArtNetIO;
 
 class ArtNetPlugin : public QLCIOPlugin
@@ -67,12 +64,16 @@ public:
     /** @reimp */
     QString pluginInfo();
 
+    /** @reimp */
+    void setParameter(QString name, QVariant &value)
+    { Q_UNUSED(name); Q_UNUSED(value); }
+
     /*********************************************************************
      * Outputs
      *********************************************************************/
 public:
     /** @reimp */
-    void openOutput(quint32 output);
+    bool openOutput(quint32 output);
 
     /** @reimp */
     void closeOutput(quint32 output);
@@ -84,14 +85,14 @@ public:
     QString outputInfo(quint32 output);
 
     /** @reimp */
-    void writeUniverse(quint32 output, const QByteArray& universe);
+    void writeUniverse(quint32 universe, quint32 output, const QByteArray& data);
 
     /*************************************************************************
      * Inputs
      *************************************************************************/
 public:
     /** @reimp */
-    void openInput(quint32 input);
+    bool openInput(quint32 input);
 
     /** @reimp */
     void closeInput(quint32 input);
@@ -105,9 +106,6 @@ public:
     /** @reimp */
     void sendFeedBack(quint32 input, quint32 channel, uchar value, const QString& key)
         { Q_UNUSED(input); Q_UNUSED(channel); Q_UNUSED(value); Q_UNUSED(key); }
-
-    /** send an event to the upper layers */
-    void sendValueChanged(quint32 input, QString path, uchar value);
 
     /*********************************************************************
      * Configuration
@@ -130,15 +128,8 @@ private:
     /** List holding the detected system network interfaces */
     QList<QNetworkAddressEntry> m_netInterfaces;
 
-    /** List holding the detected system network interfaces MAC Address */
-    QList<QString>m_netMACAddresses;
-
     /** Map of the ArtNet plugin Input/Output lines */
     QList<ArtNetIO>m_IOmapping;
-
-private slots:
-    void slotInputValueChanged(quint32 input, int channel, uchar value);
-
 };
 
 #endif

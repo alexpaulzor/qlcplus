@@ -22,6 +22,10 @@
 
 #include <QDial>
 
+/** @addtogroup ui UI
+ * @{
+ */
+
 class KnobWidget : public QDial
 {
     Q_OBJECT
@@ -34,8 +38,11 @@ public:
 
     void setEnabled(bool);
 
+    void setColor(QColor color);
+
 protected:
     void prepareCursor();
+    void prepareBody();
 
     void resizeEvent(QResizeEvent *e);
     void paintEvent(QPaintEvent* e);
@@ -45,6 +52,10 @@ private:
 private:
     QPixmap* m_background;
     QPixmap* m_cursor;
+    QColor m_gradStartColor;
+    QColor m_gradEndColor;
 };
+
+/** @} */
 
 #endif

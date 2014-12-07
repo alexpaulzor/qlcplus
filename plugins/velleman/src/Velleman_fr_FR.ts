@@ -4,9 +4,9 @@
 <context>
     <name>Velleman</name>
     <message>
-        <location filename="velleman.cpp" line="121"/>
+        <location filename="velleman.cpp" line="122"/>
         <source>This plugin provides DMX output support for the Velleman K8062D using the DLL supplied with the product.</source>
-        <translation>Ce greffon active la sortie DMX pour les périphériques Velleman K8062D utilisant la DLL fournie avec le produit.</translation>
+        <translation>Ce plugin permet le support de la sortie des périphériques Velleman K8062D en utilisant la DLL fournie avec le produit.</translation>
     </message>
 </context>
 </TS>

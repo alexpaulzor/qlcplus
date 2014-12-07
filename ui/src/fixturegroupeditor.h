@@ -27,6 +27,10 @@
 class FixtureGroup;
 class Doc;
 
+/** @addtogroup ui_fixtures
+ * @{
+ */
+
 class FixtureGroupEditor : public QWidget, public Ui_FixtureGroupEditor
 {
     Q_OBJECT
@@ -50,6 +54,7 @@ private slots:
 
     void slotCellActivated(int row, int column);
     void slotCellChanged(int row, int column);
+    void slotResized();
 
 private:
     FixtureGroup* m_grp; //! The group being edited
@@ -57,5 +62,7 @@ private:
     int m_row;           //! Currently selected row
     int m_column;        //! Currently selected column
 };
+
+/** @} */
 
 #endif

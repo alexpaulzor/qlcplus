@@ -117,10 +117,14 @@ void OlaIO::setServerEmbedded(bool embedServer)
  * Outputs
  ****************************************************************************/
 
-void OlaIO::openOutput(quint32 output)
+bool OlaIO::openOutput(quint32 output)
 {
     if (output >= UNIVERSE_COUNT)
+    {
         qWarning() << Q_FUNC_INFO << "output" << output << "is out of range";
+        return false;
+    }
+    return true;
 }
 
 void OlaIO::closeOutput(quint32 output)
@@ -172,12 +176,14 @@ QString OlaIO::outputInfo(quint32 output)
     return str;
 }
 
-void OlaIO::writeUniverse(quint32 output, const QByteArray& universe)
+void OlaIO::writeUniverse(quint32 universe, quint32 output, const QByteArray &data)
 {
+    Q_UNUSED(universe)
+
     if (output > UNIVERSE_COUNT || !m_thread)
         return;
     else
-        m_thread->write_dmx(m_outputs[output], universe);
+        m_thread->write_dmx(m_outputs[output], data);
 }
 
 QList <uint> OlaIO::outputMapping() const

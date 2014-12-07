@@ -33,10 +33,11 @@
 
 #include "qlcinputchannel.h"
 #include "qlcinputprofile.h"
+#include "qlcchannel.h"
 
 #include "inputchanneleditor.h"
 #include "inputprofileeditor.h"
-#include "inputmap.h"
+#include "inputoutputmap.h"
 #include "apputil.h"
 
 #define SETTINGS_GEOMETRY "inputprofileeditor/geometry"
@@ -51,13 +52,13 @@
  ****************************************************************************/
 
 InputProfileEditor::InputProfileEditor(QWidget* parent, QLCInputProfile* profile,
-                                       InputMap* inputMap)
+                                       InputOutputMap *ioMap)
     : QDialog(parent)
-    , m_inputMap(inputMap)
+    , m_ioMap(ioMap)
     , m_wizardActive(false)
     , m_latestItem(NULL)
 {
-    Q_ASSERT(inputMap != NULL);
+    Q_ASSERT(ioMap != NULL);
 
     setupUi(this);
 
@@ -70,11 +71,17 @@ InputProfileEditor::InputProfileEditor(QWidget* parent, QLCInputProfile* profile
             this, SLOT(slotEditClicked()));
     connect(m_wizardButton, SIGNAL(clicked(bool)),
             this, SLOT(slotWizardClicked(bool)));
+    connect(m_tree, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
+            this, SLOT(slotItemClicked(QTreeWidgetItem*,int)));
     connect(m_tree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),
             this, SLOT(slotEditClicked()));
+    connect(m_movementCombo, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(slotMovementComboChanged(int)));
+    connect(m_sensitivitySpin, SIGNAL(valueChanged(int)),
+            this, SLOT(slotSensitivitySpinChanged(int)));
 
     /* Listen to input data */
-    connect(inputMap, SIGNAL(inputValueChanged(quint32, quint32, uchar, const QString&)),
+    connect(m_ioMap, SIGNAL(inputValueChanged(quint32, quint32, uchar, const QString&)),
             this, SLOT(slotInputValueChanged(quint32, quint32, uchar, const QString&)));
 
     if (profile == NULL)
@@ -96,14 +103,20 @@ InputProfileEditor::InputProfileEditor(QWidget* parent, QLCInputProfile* profile
         }
     }
 
+    QList<QLCInputProfile::Type> types = QLCInputProfile::types();
+    for (int i = 0; i < types.size(); ++i)
+    {
+        const QLCInputProfile::Type type = types.at(i);
+        m_typeCombo->addItem(QLCInputProfile::typeToString(type), type);
+        if (m_profile->type() == type)
+            m_typeCombo->setCurrentIndex(i);
+    }
+
     /* Profile manufacturer & model */
     m_manufacturerEdit->setText(m_profile->manufacturer());
     m_modelEdit->setText(m_profile->model());
-    if (m_profile->type() == "OSC")
-        m_typeCombo->setCurrentIndex(1);
-    else
-        m_typeCombo->setCurrentIndex(0);
-
+  
+    m_behaviourBox->hide();
     /* Fill up the tree with profile's channels */
     fillTree();
 
@@ -151,20 +164,7 @@ void InputProfileEditor::updateChannelItem(QTreeWidgetItem* item,
     item->setText(KColumnNumber, QString("%1").arg(num + 1));
     item->setText(KColumnName, ch->name());
     item->setText(KColumnType, QLCInputChannel::typeToString(ch->type()));
-
-    /* Display nice icons to indicate channel type */
-    if (ch->type() == QLCInputChannel::Slider)
-        item->setIcon(KColumnType, QIcon(":/slider.png"));
-    else if (ch->type() == QLCInputChannel::Knob)
-        item->setIcon(KColumnType, QIcon(":/knob.png"));
-    else if (ch->type() == QLCInputChannel::Button)
-        item->setIcon(KColumnType, QIcon(":/button.png"));
-    else if (ch->type() == QLCInputChannel::NextPage)
-        item->setIcon(KColumnType, QIcon(":/forward.png"));
-    else if (ch->type() == QLCInputChannel::PrevPage)
-        item->setIcon(KColumnType, QIcon(":/back.png"));
-    else if (ch->type() == QLCInputChannel::PageSet)
-        item->setIcon(KColumnType, QIcon(":/star.png"));
+    item->setIcon(KColumnType, ch->icon());
 }
 
 /****************************************************************************
@@ -188,7 +188,7 @@ void InputProfileEditor::accept()
 
     m_profile->setManufacturer(m_manufacturerEdit->text());
     m_profile->setModel(m_modelEdit->text());
-    m_profile->setType(m_typeCombo->currentText());
+    m_profile->setType(currentProfileType());
 
     /* Check that we have at least the bare necessities to save the profile */
     if (m_profile->manufacturer().isEmpty() == true ||
@@ -210,7 +210,7 @@ void InputProfileEditor::accept()
 void InputProfileEditor::slotAddClicked()
 {
     QLCInputChannel* channel = new QLCInputChannel();
-    InputChannelEditor ice(this, m_profile, channel);
+    InputChannelEditor ice(this, m_profile, channel, currentProfileType());
 add:
     if (ice.exec() == QDialog::Accepted)
     {
@@ -266,7 +266,7 @@ void InputProfileEditor::slotRemoveClicked()
         Q_ASSERT(item != NULL);
 
         /* Remove & Delete the channel object */
-        chnum = item->text(KColumnNumber).toInt() - 1;
+        chnum = item->text(KColumnNumber).toUInt() - 1;
         m_profile->removeChannel(chnum);
 
         /* Choose the closest item below or above the removed items
@@ -295,12 +295,12 @@ void InputProfileEditor::slotEditClicked()
             return;
 
         /* Find the channel object associated to the selected item */
-        chnum = item->text(KColumnNumber).toInt() - 1;
+        chnum = item->text(KColumnNumber).toUInt() - 1;
         channel = m_profile->channel(chnum);
         Q_ASSERT(channel != NULL);
 
         /* Edit the channel and update its item if necessary */
-        InputChannelEditor ice(this, m_profile, channel);
+        InputChannelEditor ice(this, m_profile, channel, currentProfileType());
 edit:
         if (ice.exec() == QDialog::Accepted)
         {
@@ -309,7 +309,7 @@ edit:
 
             if (another == NULL || another == channel)
             {
-                if (ice.channel() != InputMap::invalidChannel())
+                if (ice.channel() != QLCChannel::invalid())
                     m_profile->remapChannel(channel, ice.channel());
                 if (ice.name().isEmpty() == false)
                     channel->setName(ice.name());
@@ -331,7 +331,7 @@ edit:
     else if (m_tree->selectedItems().count() > 1)
     {
         /* Multiple channels selected. Apply changes to all of them */
-        InputChannelEditor ice(this, NULL, NULL);
+        InputChannelEditor ice(this, NULL, NULL, QLCInputProfile::Dmx);
         if (ice.exec() == QDialog::Accepted)
         {
             QListIterator <QTreeWidgetItem*>
@@ -341,7 +341,7 @@ edit:
                 item = it.next();
                 Q_ASSERT(item != NULL);
 
-                chnum = item->text(KColumnNumber).toInt() - 1;
+                chnum = item->text(KColumnNumber).toUInt() - 1;
                 channel = m_profile->channel(chnum);
                 Q_ASSERT(channel != NULL);
 
@@ -379,6 +379,89 @@ void InputProfileEditor::slotWizardClicked(bool checked)
 
     m_buttonBox->setEnabled(!checked);
     m_tab->setTabEnabled(0, !checked);
+}
+
+void InputProfileEditor::slotItemClicked(QTreeWidgetItem *item, int col)
+{
+    Q_UNUSED(col)
+
+    quint32 chNum = item->text(KColumnNumber).toUInt() - 1;
+    QLCInputChannel *ich = m_profile->channel(chNum);
+    if (ich != NULL)
+    {
+        if (ich->type() == QLCInputChannel::Slider)
+        {
+            m_behaviourBox->show();
+            if (ich->movementType() == QLCInputChannel::Absolute)
+            {
+                m_movementCombo->setCurrentIndex(0);
+                m_sensitivitySpin->setEnabled(false);
+            }
+            else
+            {
+                m_movementCombo->setCurrentIndex(1);
+                m_sensitivitySpin->setValue(ich->movementSensitivity());
+                m_sensitivitySpin->setEnabled(true);
+            }
+        }
+        else
+            m_behaviourBox->hide();
+    }
+}
+
+void InputProfileEditor::slotMovementComboChanged(int index)
+{
+    QLCInputChannel* channel;
+    quint32 chnum;
+    QTreeWidgetItem* item;
+
+    if (index == 1)
+        m_sensitivitySpin->setEnabled(true);
+    else
+        m_sensitivitySpin->setEnabled(false);
+
+    QListIterator <QTreeWidgetItem*>
+    it(m_tree->selectedItems());
+    while (it.hasNext() == true)
+    {
+        item = it.next();
+        Q_ASSERT(item != NULL);
+
+        chnum = item->text(KColumnNumber).toUInt() - 1;
+        channel = m_profile->channel(chnum);
+        Q_ASSERT(channel != NULL);
+
+        if (channel->type() == QLCInputChannel::Slider)
+        {
+            if (index == 1)
+                channel->setMovementType(QLCInputChannel::Relative);
+            else
+                channel->setMovementType(QLCInputChannel::Absolute);
+        }
+    }
+}
+
+void InputProfileEditor::slotSensitivitySpinChanged(int value)
+{
+    QLCInputChannel* channel;
+    quint32 chnum;
+    QTreeWidgetItem* item;
+
+    QListIterator <QTreeWidgetItem*>
+    it(m_tree->selectedItems());
+    while (it.hasNext() == true)
+    {
+        item = it.next();
+        Q_ASSERT(item != NULL);
+
+        chnum = item->text(KColumnNumber).toUInt() - 1;
+        channel = m_profile->channel(chnum);
+        Q_ASSERT(channel != NULL);
+
+        if (channel->type() == QLCInputChannel::Slider &&
+            channel->movementType() == QLCInputChannel::Relative)
+                channel->setMovementSensitivity(value);
+    }
 }
 
 void InputProfileEditor::slotInputValueChanged(quint32 universe,
@@ -480,4 +563,9 @@ void InputProfileEditor::slotTimerTimeout()
 const QLCInputProfile* InputProfileEditor::profile() const
 {
     return m_profile;
+}
+
+QLCInputProfile::Type InputProfileEditor::currentProfileType() const
+{
+    return static_cast<QLCInputProfile::Type>(m_typeCombo->itemData(m_typeCombo->currentIndex()).toInt());
 }

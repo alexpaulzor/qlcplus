@@ -43,6 +43,10 @@ class QAction;
 class QLabel;
 class App;
 
+/** @addtogroup ui UI
+ * @{
+ */
+
 #define KXMLQLCWorkspace "Workspace"
 
 class App : public QMainWindow
@@ -57,6 +61,7 @@ public:
     App();
     ~App();
     void startup();
+    void enableOverscan();
 
 private:
     void init();
@@ -66,6 +71,7 @@ private:
 private:
     QTabWidget* m_tab;
     QDir m_workingDirectory;
+    bool m_overscan;
 
     /*********************************************************************
      * Progress dialog
@@ -117,6 +123,7 @@ private:
     void initActions();
     void initToolBar();
     bool handleFileError(QFile::FileError error);
+    bool saveModifiedDoc(const QString & title, const QString & message);
 
 public slots:
     bool slotFileNew();
@@ -135,6 +142,7 @@ public slots:
     void slotRunningFunctionsChanged();
     void slotDumpDmxIntoFunction();
     void slotFunctionLiveEdit();
+    void slotLiveEditVirtualConsole();
 
     void slotHelpIndex();
     void slotHelpAbout();
@@ -155,6 +163,7 @@ private:
     QAction* m_controlPanicAction;
     QAction* m_dumpDmxAction;
     QAction* m_liveEditAction;
+    QAction* m_liveEditVirtualConsoleAction;
 
     QAction* m_helpIndexAction;
     QAction* m_helpAboutAction;
@@ -202,7 +211,7 @@ public:
      *
      * @param doc The XML document to load from.
      */
-    bool loadXML(const QDomDocument& doc, bool goToConsole = false);
+    bool loadXML(const QDomDocument& doc, bool goToConsole = false, bool fromMemory = false);
 
     /**
      * Save workspace contents to a file with the given name. Changes the
@@ -216,8 +225,12 @@ public:
 public slots:
     void slotLoadDocFromMemory(QString xmlData);
 
+    void slotSaveAutostart(QString fileName);
+
 private:
     QString m_fileName;
 };
+
+/** @} */
 
 #endif

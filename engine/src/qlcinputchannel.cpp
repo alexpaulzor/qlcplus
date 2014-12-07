@@ -19,6 +19,7 @@
 
 #include <QString>
 #include <QtXml>
+#include <QIcon>
 
 #include "qlcinputchannel.h"
 #include "qlcinputprofile.h"
@@ -30,12 +31,16 @@
 QLCInputChannel::QLCInputChannel()
 {
     m_type = Button;
+    m_movementType = Absolute;
+    m_movementSensitivity = 20;
 }
 
 QLCInputChannel::QLCInputChannel(const QLCInputChannel& channel)
 {
     m_name = channel.m_name;
     m_type = channel.m_type;
+    m_movementType = channel.m_movementType;
+    m_movementSensitivity = channel.m_movementSensitivity;
 }
 
 QLCInputChannel::~QLCInputChannel()
@@ -117,6 +122,37 @@ QStringList QLCInputChannel::types()
     return list;
 }
 
+QIcon QLCInputChannel::typeToIcon(Type type)
+{
+    switch (type)
+    {
+    case Button:
+        return QIcon(":/button.png");
+    case Knob:
+        return QIcon(":/knob.png");
+    case Slider:
+        return QIcon(":/slider.png");
+    case PrevPage:
+        return QIcon(":/forward.png");
+    case NextPage:
+        return QIcon(":/back.png");
+    case PageSet:
+       return QIcon(":/star.png");
+    default:
+       return QIcon();
+    }
+}
+
+QIcon QLCInputChannel::stringToIcon(const QString& str)
+{
+    return typeToIcon(stringToType(str));
+}
+
+QIcon QLCInputChannel::icon() const
+{
+    return typeToIcon(type());
+}
+
 /****************************************************************************
  * Name
  ****************************************************************************/
@@ -129,6 +165,30 @@ void QLCInputChannel::setName(const QString& name)
 QString QLCInputChannel::name() const
 {
     return m_name;
+}
+
+/*********************************************************************
+ * Slider movement behaviour specific methods
+ *********************************************************************/
+
+QLCInputChannel::MovementType QLCInputChannel::movementType() const
+{
+    return m_movementType;
+}
+
+void QLCInputChannel::setMovementType(QLCInputChannel::MovementType type)
+{
+    m_movementType = type;
+}
+
+int QLCInputChannel::movementSensitivity() const
+{
+    return m_movementSensitivity;
+}
+
+void QLCInputChannel::setMovementSensitivity(int value)
+{
+    m_movementSensitivity = value;
 }
 
 /****************************************************************************
@@ -156,6 +216,13 @@ bool QLCInputChannel::loadXML(const QDomElement& root)
         else if (tag.tagName() == KXMLQLCInputChannelType)
         {
             setType(stringToType(tag.text()));
+        }
+        else if (tag.tagName() == KXMLQLCInputChannelMovement)
+        {
+            if (tag.hasAttribute(KXMLQLCInputChannelSensitivity))
+                setMovementSensitivity(tag.attribute(KXMLQLCInputChannelSensitivity).toInt());
+            if (tag.text() == KXMLQLCInputChannelRelative)
+                setMovementType(Relative);
         }
         else
         {
@@ -198,6 +265,16 @@ bool QLCInputChannel::saveXML(QDomDocument* doc, QDomElement* root,
     tag.appendChild(subtag);
     text = doc->createTextNode(typeToString(m_type));
     subtag.appendChild(text);
+
+    /* Save only slider's relative movement */
+    if (type() == Slider && movementType() == Relative)
+    {
+        subtag = doc->createElement(KXMLQLCInputChannelMovement);
+        subtag.setAttribute(KXMLQLCInputChannelSensitivity, movementSensitivity());
+        tag.appendChild(subtag);
+        text = doc->createTextNode(KXMLQLCInputChannelRelative);
+        subtag.appendChild(text);
+    }
 
     return true;
 }

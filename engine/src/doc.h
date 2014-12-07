@@ -26,19 +26,25 @@
 #include <QMap>
 
 #include "qlcfixturedefcache.h"
+#include "qlcmodifierscache.h"
+#include "monitorproperties.h"
+#include "inputoutputmap.h"
 #include "ioplugincache.h"
 #include "channelsgroup.h"
 #include "fixturegroup.h"
 #include "qlcclipboard.h"
 #include "mastertimer.h"
-#include "outputmap.h"
-#include "inputmap.h"
 #include "function.h"
 #include "fixture.h"
 
 class QDomDocument;
 class AudioCapture;
 class QString;
+class RGBScriptsCache;
+
+/** @addtogroup engine Engine
+ * @{
+ */
 
 #define KXMLQLCEngine "Engine"
 #define KXMLQLCStartupFunction "Autostart"
@@ -59,7 +65,7 @@ public:
      * @param outputUniverses Number of output (DMX) universes
      * @param inputUniverses Number of input universes
      */
-    Doc(QObject* parent, int outputUniverses = 4, int inputUniverses = 4);
+    Doc(QObject* parent, int universes = 4);
 
     /** Destructor */
     ~Doc();
@@ -112,17 +118,20 @@ public:
     /** Get the fixture definition cache object */
     QLCFixtureDefCache* fixtureDefCache() const;
 
+    /** Get the channel modifiers cache object */
+    QLCModifiersCache* modifiersCache() const;
+
+    /** Get the RGB scripts cache object */
+    RGBScriptsCache* rgbScriptsCache() const;
+
     /** Get the I/O plugin cache object */
     IOPluginCache* ioPluginCache() const;
 
     /** Get the DMX output map object */
-    OutputMap* outputMap() const;
+    InputOutputMap* inputOutputMap() const;
 
     /** Get the MasterTimer object that runs the show */
     MasterTimer* masterTimer() const;
-
-    /** Get the input map object */
-    InputMap* inputMap() const;
 
     /** Get the audio input capture object */
     AudioCapture* audioInputCapture();
@@ -132,11 +141,13 @@ public:
 
 private:
     QLCFixtureDefCache* m_fixtureDefCache;
+    QLCModifiersCache* m_modifiersCache;
+    RGBScriptsCache* m_rgbScriptsCache;
     IOPluginCache* m_ioPluginCache;
-    OutputMap* m_outputMap;
+    InputOutputMap *m_ioMap;
     MasterTimer* m_masterTimer;
-    InputMap* m_inputMap;
     AudioCapture *m_inputCapture;
+    MonitorProperties *m_monitorProps;
 
     /*********************************************************************
      * Main operating mode
@@ -263,6 +274,14 @@ public:
     bool changeFixtureMode(quint32 id, const QLCFixtureMode *mode);
 
     /**
+     * Update the channels capabilities of an existing fixture with the given ID
+     * @param id The ID of the fixture instance
+     * @param forcedHTP A list of channel indices forced to act as HTP
+     * @param forcedLTP A list of channel indices forced to act as LTP
+     */
+    bool updateFixtureChannelCapabilities(quint32 id, QList<int>forcedHTP, QList<int>forcedLTP);
+
+    /**
      * Get the fixture instance that has the given ID
      *
      * @param id The ID of the fixture to get
@@ -313,11 +332,11 @@ private slots:
     void slotFixtureChanged(quint32 fxi_id);
 
 protected:
-    /** Fixtures */
-    QMap <quint32,Fixture*> m_fixtures;
+    /** Fixtures hash: < ID, Fixture instance > */
+    QHash <quint32,Fixture*> m_fixtures;
 
-    /** Addresses occupied by fixtures */
-    QHash <quint32,quint32> m_addresses;
+    /** Map of the addresses occupied by fixtures */
+    QHash <quint32, quint32> m_addresses;
 
     /** Latest assigned fixture ID */
     quint32 m_latestFixtureId;
@@ -499,6 +518,9 @@ private slots:
     /** Slot that catches function change signals */
     void slotFunctionChanged(quint32 fid);
 
+    /** Slot that catches function name change signals */
+    void slotFunctionNameChanged(quint32 fid);
+
 signals:
     /** Signal that a function has been added */
     void functionAdded(quint32 function);
@@ -509,6 +531,9 @@ signals:
     /** Signal that a function has been changed */
     void functionChanged(quint32 function);
 
+    /** Signal that a function has been changed */
+    void functionNameChanged(quint32 function);
+
 protected:
     /** Functions */
     QMap <quint32,Function*> m_functions;
@@ -518,6 +543,12 @@ protected:
 
     /** Startup function ID */
     quint32 m_startupFunctionId;
+
+    /*********************************************************************
+     * Monitor Properties
+     *********************************************************************/
+public:
+    MonitorProperties *monitorProperties();
 
     /*********************************************************************
      * Load & Save
@@ -547,6 +578,11 @@ public:
     void appendToErrorLog(QString error);
 
     /**
+     * Clear any previously filled error log
+     */
+    void clearErrorLog();
+
+    /**
      * Retrieve the error log string, filled during a project load
      */
     QString errorLog();
@@ -560,5 +596,7 @@ private:
 
     QString m_errorLog;
 };
+
+/** @} */
 
 #endif

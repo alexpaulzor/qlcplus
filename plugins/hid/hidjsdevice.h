@@ -24,14 +24,19 @@
 #include <QFile>
 #include <QHash>
 
-#include <sys/ioctl.h>
-#include <linux/input.h>
-#include <linux/types.h>
+#if defined(Q_WS_X11) || defined(Q_OS_LINUX)
+  #include <sys/ioctl.h>
+  #include <linux/input.h>
+  #include <linux/types.h>
+#elif defined(WIN32) || defined (Q_OS_WIN)
+  #include <windows.h>
+  #include <mmsystem.h>
+  #include <regstr.h>
+#endif
 
 #include "hiddevice.h"
 
-class HIDEventDevice;
-class HID;
+class HIDPlugin;
 
 /*****************************************************************************
  * HIDEventDevice
@@ -42,26 +47,44 @@ class HIDJsDevice : public HIDDevice
     Q_OBJECT
 
 public:
-    HIDJsDevice(HID* parent, quint32 line, const QString& path);
+    HIDJsDevice(HIDPlugin* parent, quint32 line, const QString& name, const QString& path);
     virtual ~HIDJsDevice();
 
+#if defined(WIN32) || defined (Q_OS_WIN)
+    static bool isJoystick(unsigned short vid, unsigned short pid);
+#endif
+
 protected:
+
+#if defined(Q_WS_X11) || defined(Q_OS_LINUX)
+    bool openDevice();
+#endif
+
     /** Initialize the device, find out its capabilities etc. */
     void init();
 
-protected:
-    unsigned char m_axes;
-    unsigned char m_buttons;
+    /** @reimp */
+    bool hasInput() { return true; }
 
+protected:
+    unsigned char m_axesNumber;
+    unsigned char m_buttonsNumber;
+#if defined(WIN32) || defined (Q_OS_WIN)
+    JOYCAPS m_caps;
+    JOYINFOEX m_info;
+    UINT m_windId;
+    DWORD m_buttonsMask;
+    QByteArray m_axesValues;
+#endif
     /*********************************************************************
      * File operations
      *********************************************************************/
 public:
     /** @reimp */
-    bool open();
+    bool openInput();
 
     /** @reimp */
-    void close();
+    void closeInput();
 
     /** @reimp */
     QString path() const;
@@ -82,6 +105,10 @@ public:
 public:
     /** @reimp */
     void feedBack(quint32 channel, uchar value);
+
+private:
+    /** @reimp */
+    void run();
 };
 
 #endif

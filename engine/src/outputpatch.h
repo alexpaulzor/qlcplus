@@ -24,6 +24,12 @@
 
 class QLCIOPlugin;
 
+/** @addtogroup engine Engine
+ * @{
+ */
+
+#define KOutputNone QObject::tr("None")
+
 #define KXMLQLCOutputPatch "Patch"
 #define KXMLQLCOutputPatchUniverse "Universe"
 #define KXMLQLCOutputPatchPlugin "Plugin"
@@ -45,14 +51,33 @@ public:
      * Plugin & output
      ********************************************************************/
 public:
-    void set(QLCIOPlugin* plugin, quint32 output);
-    void reconnect();
+    /**
+     * Set the plugin to use and the plugin line number to output data on
+     */
+    bool set(QLCIOPlugin* plugin, quint32 output);
 
+    /**
+     * If a valid plugin and line have been set, close
+     * the output line and re-open it again
+     */
+    bool reconnect();
+
+    /** The plugin instance that has been assigned to a patch */
     QLCIOPlugin* plugin() const;
+
+    /** Friendly name of the plugin assigned to a patch ("None" if none) */
     QString pluginName() const;
 
+    /** An output line provided by the assigned plugin */
     quint32 output() const;
+
+    /** Friendly name of the assigned output line */
     QString outputName() const;
+
+    /** Returns true if a valid plugin line has been set */
+    bool isPatched() const;
+
+    void setPluginProperty(QString prop, QVariant value);
 
 private:
     QLCIOPlugin* m_plugin;
@@ -64,7 +89,9 @@ private:
 public:
     /** Write the contents of a 512 channel value buffer to the plugin.
       * Called periodically by OutputMap. No need to call manually. */
-    void dump(const QByteArray& universe);
+    void dump(quint32 universe, const QByteArray &data);
 };
+
+/** @} */
 
 #endif

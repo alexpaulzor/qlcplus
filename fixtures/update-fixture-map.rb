@@ -9,14 +9,16 @@
 
 require 'libxml'
 
+NS = ['xmlns:http://qlcplus.sourceforge.net/FixtureDefinition']
+
 class FixtureDef
   class Creator 
     attr_accessor :name, :version, :author
     def initialize(node)
       return if node.empty?
-      @name = node.find_first('Name').content 
-      @version = node.find_first('Version').content 
-      @author = node.find_first('Author').content 
+      @name = node.find_first('xmlns:Name', NS).content 
+      @version = node.find_first('xmlns:Version', NS).content 
+      @author = node.find_first('xmlns:Author', NS).content 
     end
   end
 
@@ -24,8 +26,8 @@ class FixtureDef
     attr_accessor :min, :max, :name, :color, :colour2
     def initialize(node)
       return if node.empty?
-      @min = node.attributes['Min'] 
-      @max = node.attributes['Max'] 
+      @min = node.attributes['Min'].to_i 
+      @max = node.attributes['Max'].to_i
       @color = node.attributes['Color'] 
       @color2 = node.attributes['Color2'] 
       @name = node.content 
@@ -37,7 +39,7 @@ class FixtureDef
     def initialize(node)
       return if node.empty?
       @name = node.content 
-      @byte = node.attributes['Byte'] 
+      @byte = node.attributes['Byte'].to_i
     end
   end
 
@@ -46,10 +48,10 @@ class FixtureDef
     def initialize(node)
       return if node.empty?
       @name = node.attributes['Name'] 
-      @group = Group.new(node.find_first('Group'))
-      n = node.find_first('Colour')
+      @group = Group.new(node.find_first('xmlns:Group', NS))
+      n = node.find_first('xmlns:Colour', NS)
       @color = n.content unless n.nil?
-      n = node.find('Capability')
+      n = node.find('xmlns:Capability', NS)
       @capabilities = n.nil? ? [] : n.map {|c| Capability.new(c) }
     end
   end
@@ -109,11 +111,11 @@ class FixtureDef
     attr_accessor :bulb, :dimensions, :lens, :focus, :technical
     def initialize(node)
       return if node.empty?
-      @bulb = Bulb.new(node.find_first('Bulb'))
-      @dimensions = Dimensions.new(node.find_first('Dimensions'))
-      @lens = Lens.new(node.find_first('Lens'))
-      @focus = Focus.new(node.find_first('Focus'))
-      @technical = Technical.new(node.find_first('Technical'))
+      @bulb = Bulb.new(node.find_first('xmlns:Bulb', NS))
+      @dimensions = Dimensions.new(node.find_first('xmlns:Dimensions', NS))
+      @lens = Lens.new(node.find_first('xmlns:Lens', NS))
+      @focus = Focus.new(node.find_first('xmlns:Focus', NS))
+      @technical = Technical.new(node.find_first('xmlns:Technical', NS))
     end
   end
 
@@ -122,15 +124,16 @@ class FixtureDef
     def initialize(node)
       return if node.empty?
       @name = node.content 
-      @number = node.attributes['Number'] 
+      @number = node.attributes['Number'].to_i
     end
   end
   
   class Head
-    attr_accessor :channels
+    attr_accessor :channels, :index
     def initialize(node)
+      channels = []
       return if node.empty?
-      @channels = node.find("Channel").map {|c| c.content.to_i }
+      @channels = node.find("xmlns:Channel", NS).map {|c| c.content.to_i }
     end
   end
 
@@ -141,11 +144,12 @@ class FixtureDef
       @heads = []
       return if node.empty?
       @name = node.attributes['Name']
-      @physical = Physical.new(node.find_first('Physical'))
-      n = node.find('Channel')
+      @physical = Physical.new(node.find_first('xmlns:Physical', NS))
+      n = node.find('xmlns:Channel', NS)
       @channels = n.empty? ? [] : n.map {|c| ChannelRef.new(c) }
-      n = node.find('Head')
+      n = node.find('xmlns:Head', NS)
       @heads = n.empty? ? [] : n.map {|h| Head.new(h) }
+      @heads.each_with_index {|h, i| h.index = i + 1}
     end
   end
 
@@ -156,14 +160,37 @@ class FixtureDef
   end
 
   def load(path)
-    doc = LibXML::XML::Document.file(path)
+    @doc = LibXML::XML::Document.file(path)
+    if @doc.root.namespaces.default.nil?
+      puts "fixing #{path}"
+      @doc.root.find('//Dimensions').each do |node|
+        node['Weight'] = node['Weight'].gsub(',','.')
+      end
+
+      @doc.root.find('//DegreesMin').each do |node|
+        node['Weight'] = node['Weight'].gsub(',','.')
+      end
+
+      @doc.root.find('//DegreesMax').each do |node|
+        node['Weight'] = node['Weight'].gsub(',','.')
+      end
+
+      @doc.root.find('//Author').each do |node|
+        node.content = node.content.gsub('hjunnila', 'Heikki Junnila').gsub('jlgriffin', 'JL Griffin').gsub('griffinwebnet', 'JL Griffin').gsub(',,,', '').gsub('&', '&amp;')
+      end
+
+      @doc.root.namespaces.namespace = LibXML::XML::Namespace.new(@doc.root, nil, "http://qlcplus.sourceforge.net/FixtureDefinition")
+      @doc.save(path, :indent => true, :encoding => LibXML::XML::Encoding::UTF_8)
+
+      @doc = LibXML::XML::Document.file(path)
+    end
     @path = path
-    @manufacturer = doc.find_first('/FixtureDefinition/Manufacturer').content
-    @model = doc.find_first('/FixtureDefinition/Model').content
-    @type = doc.find_first('/FixtureDefinition/Type').content
-    @creator = Creator.new(doc.find_first('/FixtureDefinition/Creator'))
-    @channels = doc.find('/FixtureDefinition/Channel').map {|c| Channel.new(c) }
-    @modes = doc.find('/FixtureDefinition/Mode').map {|m| Mode.new(m) }
+    @manufacturer = @doc.find_first('/xmlns:FixtureDefinition/xmlns:Manufacturer', NS).content
+    @model = @doc.find_first('/xmlns:FixtureDefinition/xmlns:Model', NS).content
+    @type = @doc.find_first('/xmlns:FixtureDefinition/xmlns:Type', NS).content
+    @creator = Creator.new(@doc.find_first('/xmlns:FixtureDefinition/xmlns:Creator', NS))
+    @channels = @doc.find('/xmlns:FixtureDefinition/xmlns:Channel', NS).map {|c| Channel.new(c) }
+    @modes = @doc.find('/xmlns:FixtureDefinition/xmlns:Mode', NS).map {|m| Mode.new(m) }
   end
 end
 
@@ -192,6 +219,9 @@ class Fixtures
       LibXML::XML::Attr.new(node, 'md', f.model)
       doc.root << node
     end
+    if doc.root.namespaces.default.nil?
+      doc.root.namespaces.namespace = LibXML::XML::Namespace.new(doc.root, nil, "http://qlcplus.sourceforge.net/FixturesMap")
+    end
     doc.save(filename, :indent => true, :encoding => LibXML::XML::Encoding::UTF_8)
   end
 
@@ -200,6 +230,7 @@ class Fixtures
       f << <<-EOF
 <html>
 <head>
+    <meta charset='utf-8'>
 </head>
 <body>
   <table border=1>
@@ -208,6 +239,7 @@ class Fixtures
       <th rowspan=3>Model</th>
       <th rowspan=3>Version</th>
       <th rowspan=3>Author</th>
+      <th rowspan=3>Type</th>
       <th rowspan=3>Mode</th>
       <th rowspan=3>Heads</th>
       <th colspan=15>Physical</th>
@@ -244,11 +276,12 @@ EOF
       <td rowspan=#{fix.modes.size}>#{fix.model}</td>
       <td rowspan=#{fix.modes.size}>#{fix.creator.version}</td>
       <td rowspan=#{fix.modes.size}>#{fix.creator.author}</td>
+      <td rowspan=#{fix.modes.size}>#{fix.type}</td>
 
 EOF
         fix.modes.each_with_index do |m, i|
         if i > 0
-          f << "</tr></tr>"
+          f << "    <tr>\n"
         end
           f << <<-EOF
       <td>#{m.name}</td>
@@ -269,9 +302,52 @@ EOF
       <td>#{m.physical.technical.power_consumption}</td>
       <td>#{m.physical.technical.dmx_connector}</td>
     </tr>
-
 EOF
         end
+
+        f << <<-EOF
+    <tr>
+      <td colspan=22>
+        <table border=1>
+          <tr>
+            <th>&nbsp;</th>
+            <th>group</th>
+            <th>byte</th>
+            <th>color</th>
+EOF
+        fix.modes.each do |m|
+          f << "            <th colspan=2> #{m.name}</th>\n"  
+        end
+        
+        f << "          </tr>\n"
+        
+        fix.channels.each do |ch|
+          f << "          <tr>\n"
+          f << "            <td>#{ch.name}</td>\n"
+          f << "            <td>#{ch.group.name}</td>\n"
+          f << "            <td>#{ch.group.byte > 0 ? ch.group.byte : nil}</td>\n"
+          f << "            <td>#{ch.color}</td>\n"
+
+          fix.modes.each do |m|
+            mch = m.channels.find {|mc| mc.name == ch.name}
+            if mch.nil?
+              f << "            <td></td>\n"
+              f << "            <td></td>\n"
+            else
+              heads = m.heads.map {|h| h.index if h.channels.include? mch.number }.compact
+              f << "            <td>#{mch.number}</td>\n"
+              f << "            <td>#{ heads.join(',') }</td>\n"
+            end
+          end
+
+          f << "          </tr>\n"
+        end
+
+        f << <<-EOF
+          </tr>
+        </table>
+      <td>
+EOF
       end
 
       f << <<-EOF
@@ -283,9 +359,16 @@ EOF
   end
 end
 
+# LibXML::XML::Error.set_handler(&LibXML::XML::Error::VERBOSE_HANDLER)
+LibXML::XML::Error.set_handler do |error|
+  puts error.to_s
+end
+
 fm = Fixtures.new
 fm.load_fixtures('.')
 fm.update_fixtures_map
+
+puts "Total fixtures: #{fm.fixtures.size}"
 
 if ARGV.size > 0
   fm.make_overview(ARGV[0])

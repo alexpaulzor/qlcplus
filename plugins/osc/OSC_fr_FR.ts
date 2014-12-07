@@ -6,7 +6,7 @@
     <message>
         <location filename="configureosc.ui" line="14"/>
         <source>Configure OSC Plugin</source>
-        <translation>Configurer le greffon OSC</translation>
+        <translation>Configuration du plugin OSC</translation>
     </message>
     <message>
         <location filename="configureosc.ui" line="20"/>
@@ -14,7 +14,7 @@
         <location filename="configureosc.ui" line="155"/>
         <location filename="configureosc.ui" line="162"/>
         <source>Output address:</source>
-        <translation>Adresse de Sortie :</translation>
+        <translation>Adresse de sortie :</translation>
     </message>
     <message>
         <location filename="configureosc.ui" line="37"/>
@@ -23,7 +23,7 @@
         <location filename="configureosc.ui" line="135"/>
         <source>Input port:</source>
         <oldsource>Port:</oldsource>
-        <translation>Port d&apos;Entrée :</translation>
+        <translation>Port d&apos;entrée :</translation>
     </message>
     <message>
         <location filename="configureosc.ui" line="70"/>
@@ -49,41 +49,41 @@
 <context>
     <name>OSCPlugin</name>
     <message>
-        <location filename="oscplugin.cpp" line="97"/>
+        <location filename="oscplugin.cpp" line="102"/>
         <source>This plugin provides input for devices supporting the OSC transmission protocol.</source>
-        <translation>Ce greffon active les fonctions d&apos;entrée pour les périphériques supportant le protocole OSC.</translation>
+        <translation>Ce plugin permet le support des périphériques supportant le protocole OSC.</translation>
     </message>
     <message>
-        <location filename="oscplugin.cpp" line="182"/>
-        <location filename="oscplugin.cpp" line="279"/>
+        <location filename="oscplugin.cpp" line="188"/>
+        <location filename="oscplugin.cpp" line="288"/>
         <source>OSC Network</source>
         <translation>Réseau OSC</translation>
     </message>
     <message>
-        <location filename="oscplugin.cpp" line="193"/>
-        <source>Output</source>
-        <translation>Sorties</translation>
-    </message>
-    <message>
-        <location filename="oscplugin.cpp" line="196"/>
-        <location filename="oscplugin.cpp" line="293"/>
-        <source>Status: Not ready</source>
-        <oldsource>Status: Not open</oldsource>
-        <translation>Statut : Pas prêt</translation>
-    </message>
-    <message>
         <location filename="oscplugin.cpp" line="199"/>
-        <source>Address: </source>
-        <translation>Adresse :</translation>
+        <source>Output</source>
+        <translation>Sortie</translation>
     </message>
     <message>
         <location filename="oscplugin.cpp" line="202"/>
-        <location filename="oscplugin.cpp" line="296"/>
-        <source>Status: Ready</source>
-        <translation>Statut : Prêt</translation>
+        <location filename="oscplugin.cpp" line="302"/>
+        <source>Status: Not ready</source>
+        <oldsource>Status: Not open</oldsource>
+        <translation>État : indisponible</translation>
     </message>
     <message>
-        <location filename="oscplugin.cpp" line="290"/>
+        <location filename="oscplugin.cpp" line="205"/>
+        <source>Address: </source>
+        <translation>Adresse : </translation>
+    </message>
+    <message>
+        <location filename="oscplugin.cpp" line="208"/>
+        <location filename="oscplugin.cpp" line="305"/>
+        <source>Status: Ready</source>
+        <translation>État : prêt</translation>
+    </message>
+    <message>
+        <location filename="oscplugin.cpp" line="299"/>
         <source>Input</source>
         <translation>Entrée</translation>
     </message>

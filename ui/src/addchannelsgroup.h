@@ -28,6 +28,10 @@
 class ChannelsGroup;
 class Doc;
 
+/** @addtogroup ui_fixtures
+ * @{
+ */
+
 class AddChannelsGroup : public QDialog, public Ui_AddChannelsGroup
 {
     Q_OBJECT
@@ -54,7 +58,7 @@ private:
     ChannelsGroup* m_chansGroup;
 
 protected:
-    QLCInputSource m_inputSource;
+    QLCInputSource *m_inputSource;
 
     int m_checkedChannels;
     bool m_isUpdating;
@@ -67,5 +71,7 @@ protected slots:
     void slotInputValueChanged(quint32 universe, quint32 channel);
     void slotChooseInputClicked();
 };
+
+/** @} */
 
 #endif

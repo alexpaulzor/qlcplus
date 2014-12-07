@@ -101,12 +101,12 @@ quint32 QLCFixtureHead::masterIntensityChannel() const
     return m_masterIntensityChannel;
 }
 
-QList <quint32> QLCFixtureHead::rgbChannels() const
+QVector <quint32> QLCFixtureHead::rgbChannels() const
 {
     return m_rgbChannels;
 }
 
-QList <quint32> QLCFixtureHead::cmyChannels() const
+QVector <quint32> QLCFixtureHead::cmyChannels() const
 {
     return m_cmyChannels;
 }
@@ -131,6 +131,13 @@ void QLCFixtureHead::cacheChannels(const QLCFixtureMode* mode)
     while (it.hasNext() == true)
     {
         quint32 i(it.next());
+
+        if ((int)i >= mode->channels().size())
+        {
+            qDebug() << "Head contains undefined channel" << i;
+            continue;
+        }
+
         const QLCChannel* ch = mode->channels().at(i);
         Q_ASSERT(ch != NULL);
 

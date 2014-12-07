@@ -25,7 +25,9 @@
 #include <QList>
 #include <QSize>
 #include <QPair>
+#include <QHash>
 #include <QMap>
+#include <QMutex>
 
 #include "rgbscript.h"
 #include "function.h"
@@ -35,6 +37,10 @@ class GenericFader;
 class FadeChannel;
 class QTime;
 class QDir;
+
+/** @addtogroup engine_functions Functions
+ * @{
+ */
 
 class RGBMatrix : public Function
 {
@@ -47,6 +53,16 @@ class RGBMatrix : public Function
 public:
     RGBMatrix(Doc* parent);
     ~RGBMatrix();
+
+    /*********************************************************************
+     * Contents
+     *********************************************************************/
+public:
+    /** Set the matrix total duration in milliseconds */
+    void setTotalDuration(quint32 msec);
+
+    /** Get the matrix total duration in milliseconds */
+    quint32 totalDuration();
 
     /*********************************************************************
      * Copying
@@ -66,7 +82,7 @@ public:
     quint32 fixtureGroup() const;
 
 private:
-    quint32 m_fixtureGroup;
+    quint32 m_fixtureGroupID;
 
     /************************************************************************
      * Algorithm
@@ -78,14 +94,21 @@ public:
     /** Get the current RGB Algorithm. */
     RGBAlgorithm* algorithm() const;
 
-    /** Get a list of RGBMap steps for preview purposes, using the current algorithm. */
-    QList <RGBMap> previewMaps();
+    /** Get the algorithm protection mutex */
+    QMutex& algorithmMutex();
+
+    /** Get the number of steps of the current algorithm */
+    int stepsCount();
+
+    /** Get the preview of the current algorithm at the given step */
+    RGBMap previewMap(int step);
 
 private:
     RGBAlgorithm* m_algorithm;
+    QMutex m_algorithmMutex;
 
     /************************************************************************
-     * Colour
+     * Color
      ************************************************************************/
 public:
     void setStartColor(const QColor& c);
@@ -102,6 +125,20 @@ public:
 private:
     QColor m_startColor;
     QColor m_endColor;
+
+    /************************************************************************
+     * Properties
+     ************************************************************************/
+public:
+    /** Set the value of the property with the given name */
+    void setProperty(QString propName, QString value);
+
+    /** Retrieve the value of the property with the given name */
+    QString property(QString propName);
+
+private:
+    /** A map of the custom properties for this matrix */
+    QHash<QString, QString>m_properties;
 
     /************************************************************************
      * Load & Save
@@ -124,10 +161,10 @@ public:
     void preRun(MasterTimer* timer);
 
     /** @reimpl */
-    void write(MasterTimer* timer, UniverseArray* universes);
+    void write(MasterTimer* timer, QList<Universe*> universes);
 
     /** @reimpl */
-    void postRun(MasterTimer* timer, UniverseArray* universes);
+    void postRun(MasterTimer* timer, QList<Universe*> universes);
 
 private:
     /** Check what should be done when elapsed() >= duration() */
@@ -154,5 +191,7 @@ public:
     /** @reimpl */
     void adjustAttribute(qreal fraction, int attributeIndex);
 };
+
+/** @} */
 
 #endif

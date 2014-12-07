@@ -29,7 +29,6 @@
 
 #include "qlcioplugin.h"
 #include "outputpatch.h"
-#include "outputmap.h"
 
 #define GRACE_MS 1
 
@@ -55,7 +54,7 @@ OutputPatch::~OutputPatch()
  * Plugin & Output
  ****************************************************************************/
 
-void OutputPatch::set(QLCIOPlugin* plugin, quint32 output)
+bool OutputPatch::set(QLCIOPlugin* plugin, quint32 output)
 {
     if (m_plugin != NULL && m_output != QLCIOPlugin::invalidLine())
         m_plugin->closeOutput(m_output);
@@ -64,10 +63,11 @@ void OutputPatch::set(QLCIOPlugin* plugin, quint32 output)
     m_output = output;
 
     if (m_plugin != NULL && m_output != QLCIOPlugin::invalidLine())
-        m_plugin->openOutput(m_output);
+        return m_plugin->openOutput(m_output);
+    return false;
 }
 
-void OutputPatch::reconnect()
+bool OutputPatch::reconnect()
 {
     if (m_plugin != NULL && m_output != QLCIOPlugin::invalidLine())
     {
@@ -77,8 +77,9 @@ void OutputPatch::reconnect()
 #else
         usleep(GRACE_MS * 1000);
 #endif
-        m_plugin->openOutput(m_output);
+        return m_plugin->openOutput(m_output);
     }
+    return false;
 }
 
 QString OutputPatch::pluginName() const
@@ -115,13 +116,24 @@ quint32 OutputPatch::output() const
         return QLCIOPlugin::invalidLine();
 }
 
+bool OutputPatch::isPatched() const
+{
+    return output() != QLCIOPlugin::invalidLine();
+}
+
+void OutputPatch::setPluginProperty(QString prop, QVariant value)
+{
+    if (m_plugin != NULL)
+        m_plugin->setParameter(prop.toLatin1().data(), value);
+}
+
 /*****************************************************************************
  * Value dump
  *****************************************************************************/
 
-void OutputPatch::dump(const QByteArray& universe)
+void OutputPatch::dump(quint32 universe, const QByteArray& data)
 {
     /* Don't do anything if there is no plugin and/or output line. */
     if (m_plugin != NULL && m_output != QLCIOPlugin::invalidLine())
-        m_plugin->writeUniverse(m_output, universe);
+        m_plugin->writeUniverse(universe, m_output, data);
 }

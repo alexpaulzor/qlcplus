@@ -30,11 +30,17 @@
 class QDomDocument;
 class QDomElement;
 
-class UniverseArray;
 class GenericFader;
 class MasterTimer;
 class Function;
+class Universe;
 class Doc;
+
+class FunctionUiState;
+
+/** @addtogroup engine_functions Functions
+ * @{
+ */
 
 #define KXMLQLCFunction "Function"
 #define KXMLQLCFunctionName "Name"
@@ -88,6 +94,9 @@ public:
         RGBMatrix  = 1 << 5,
         Show       = 1 << 6,
         Audio      = 1 << 7
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        , Video    = 1 << 8
+#endif
     };
 
     /**
@@ -121,6 +130,9 @@ public:
 signals:
     /** Signal telling that the contents of this function have changed */
     void changed(quint32 fid);
+
+    /** Signal telling that the name of this function have changed */
+    void nameChanged(quint32 fid);
 
     /*********************************************************************
      * Copying
@@ -251,7 +263,7 @@ protected:
      * Running order
      *********************************************************************/
 public:
-    enum RunOrder {	Loop, SingleShot, PingPong };
+    enum RunOrder { Loop, SingleShot, PingPong, Random };
 
 public:
     /**
@@ -350,7 +362,7 @@ public:
     uint fadeOutSpeed() const;
 
     /** Set the duration in milliseconds */
-    void setDuration(uint ms);
+    virtual void setDuration(uint ms);
 
     /** Get the duration in milliseconds */
     uint duration() const;
@@ -400,6 +412,19 @@ private:
     uint m_overrideFadeInSpeed;
     uint m_overrideFadeOutSpeed;
     uint m_overrideDuration;
+
+    /*********************************************************************
+     * UI State
+     *********************************************************************/
+public:
+    FunctionUiState * uiState();
+    const FunctionUiState * uiState() const;
+
+private:
+    virtual FunctionUiState * createUiState();
+
+private:
+    FunctionUiState * m_uiState;
 
     /*********************************************************************
      * Fixtures
@@ -502,7 +527,7 @@ public:
      * @param timer The MasterTimer that is running the function
      * @param universes The DMX universe buffer to write values into
      */
-    virtual void write(MasterTimer* timer, UniverseArray* universes) = 0;
+    virtual void write(MasterTimer* timer, QList<Universe*> universes) = 0;
 
     /**
      * Called by MasterTimer when the function is stopped. No more write()
@@ -517,7 +542,7 @@ public:
      * @param timer The MasterTimer that has stopped running the function
      * @param universes Universe buffer to write the function's exit data
      */
-    virtual void postRun(MasterTimer* timer, UniverseArray* universes);
+    virtual void postRun(MasterTimer* timer, QList<Universe*> universes);
 
 signals:
     /**
@@ -700,5 +725,7 @@ private:
     //qreal m_intensity;
     QList <Attribute> m_attributes;
 };
+
+/** @} */
 
 #endif

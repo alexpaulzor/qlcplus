@@ -22,12 +22,17 @@
 
 #include <QString>
 #include <QVector>
+#include <QColor>
 #include <QSize>
 
 class QDomDocument;
 class QDomElement;
 
 class Doc;
+
+/** @addtogroup engine_functions Functions
+ * @{
+ */
 
 typedef QVector<QVector<uint> > RGBMap;
 
@@ -44,7 +49,9 @@ public:
     {
         Text,
         Script,
-        Image
+        Image,
+        Audio,
+        Plain
     };
 
     /** Create a clone of the algorithm. Caller takes ownership of the pointer. */
@@ -78,6 +85,27 @@ public:
     /** Get the algorithm's type */
     virtual Type type() const = 0;
 
+    /** Return if the algorithm accepts/needs colors:
+     *  0 = colors not accepted (e.g. the algorithm will generate them on its own)
+     *  1 = only start color is accepted
+     *  2 = start and end colors are both accepted
+     */
+    virtual int acceptColors() const = 0;
+
+    /************************************************************************
+     * RGB Colors
+     ************************************************************************/
+public:
+    /** Set the start/end color the algorithm can use */
+    virtual void setColors(QColor start, QColor end);
+
+    QColor startColor() { return m_startColor; }
+
+    QColor endColor() { return m_endColor; }
+
+private:
+    QColor m_startColor, m_endColor;
+
     /************************************************************************
      * Available algorithms
      ************************************************************************/
@@ -95,5 +123,7 @@ public:
     /** Save the contents of an RGBAlgorithm (run-time info) to a workspace file. */
     virtual bool saveXML(QDomDocument* doc, QDomElement* root) const = 0;
 };
+
+/** @} */
 
 #endif

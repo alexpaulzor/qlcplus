@@ -30,10 +30,24 @@ class MidiDevice : public QObject
     Q_OBJECT
 
     /************************************************************************
+     * Device Type
+     ************************************************************************/
+public:
+    enum DeviceType { Input, Output };
+
+    DeviceType deviceType() const;
+   
+    static QString deviceTypeToString(DeviceType deviceType);
+
+private:
+    DeviceType m_deviceType;
+
+
+    /************************************************************************
      * Initialization
      ************************************************************************/
 public:
-    MidiDevice(const QVariant& uid, const QString& name, QObject* parent = 0);
+    MidiDevice(const QVariant& uid, const QString& name, DeviceType deviceType, QObject* parent = 0);
     virtual ~MidiDevice();
 
     QVariant uid() const;
@@ -46,6 +60,7 @@ private:
 private:
     const QVariant m_uid;
     const QString m_name;
+
 
     /************************************************************************
      * MIDI Channel
@@ -87,7 +102,7 @@ private:
      * Virtual Open/Close
      ************************************************************************/
 public:
-    virtual void open() = 0;
+    virtual bool open() = 0;
     virtual void close() = 0;
     virtual bool isOpen() const = 0;
 };

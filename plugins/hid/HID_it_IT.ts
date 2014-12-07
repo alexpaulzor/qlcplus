@@ -25,32 +25,37 @@
     </message>
 </context>
 <context>
-    <name>HID</name>
+    <name>HIDFX5Device</name>
     <message>
-        <location filename="hid.cpp" line="141"/>
-        <source>This plugin provides input support for HID-based joysticks.</source>
-        <translation>Questa plugin accetta segnale in ingresso da Joystick basati su HID.</translation>
+        <location filename="hidfx5device.cpp" line="61"/>
+        <source>FX5 USB DMX Interface Error</source>
+        <translation>Errore dell&apos;interfaccia FX5 USB DMX</translation>
     </message>
-</context>
-<context>
-    <name>HIDEventDevice</name>
     <message>
-        <location filename="hideventdevice.cpp" line="324"/>
-        <source>N/A</source>
-        <translation>N/D</translation>
+        <location filename="hidfx5device.cpp" line="62"/>
+        <source>Unable to open the FX5 Interface. Make sure the udev rule is installed.</source>
+        <translation>Impossibile aprire l&apos;interfaccia FX5. Accertati di avere le regole udev installate.</translation>
     </message>
 </context>
 <context>
     <name>HIDJsDevice</name>
     <message>
-        <location filename="hidjsdevice.cpp" line="186"/>
+        <location filename="hidjsdevice.cpp" line="313"/>
         <source>Axes: %1</source>
-        <translation>Asse: %1</translation>
+        <translation>Assi: %1</translation>
     </message>
     <message>
-        <location filename="hidjsdevice.cpp" line="188"/>
+        <location filename="hidjsdevice.cpp" line="315"/>
         <source>Buttons: %1</source>
-        <translation>Bottone: %1</translation>
+        <translation>Pulsanti: %1</translation>
+    </message>
+</context>
+<context>
+    <name>HIDPlugin</name>
+    <message>
+        <location filename="hidplugin.cpp" line="115"/>
+        <source>This plugin provides support for HID-based joysticks and the FX5 USB DMX adapter.</source>
+        <translation type="unfinished">Questa plugin fornisce supporto per i Joystick basati su sistema HID e per l&apos;adattatore FX5 USB DMX.</translation>
     </message>
 </context>
 </TS>

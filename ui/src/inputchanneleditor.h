@@ -23,9 +23,14 @@
 #include <QDialog>
 
 #include "qlcinputchannel.h"
+#include "qlcinputprofile.h"
 #include "ui_inputchanneleditor.h"
 
 class QLCInputChannel;
+
+/** @addtogroup ui_io
+ * @{
+ */
 
 class InputChannelEditor : public QDialog, public Ui_InputChannelEditor
 {
@@ -38,7 +43,8 @@ class InputChannelEditor : public QDialog, public Ui_InputChannelEditor
 public:
     InputChannelEditor(QWidget* parent,
                        const QLCInputProfile* profile,
-                       const QLCInputChannel* channel);
+                       const QLCInputChannel* channel,
+                       QLCInputProfile::Type profileType);
     virtual ~InputChannelEditor();
 
     /********************************************************************
@@ -58,6 +64,21 @@ protected:
     quint32 m_channel;
     QString m_name;
     QLCInputChannel::Type m_type;
+
+    /********************************************************************
+     * MIDI
+     ********************************************************************/
+protected slots:
+    void slotMidiChanged();
+
+private:
+    static void numberToMidi(int number, int & channel, int & message, int & param);
+    static int midiToNumber(int channel, int message, int param);
+
+    void enableMidiParam(int midiMessage, int midiParam);
+    static QString noteToString(int note);
 };
+
+/** @} */
 
 #endif

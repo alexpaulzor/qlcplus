@@ -1,8 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE FixtureDefinition>
-<FixtureDefinition>
+<FixtureDefinition xmlns="http://qlcplus.sourceforge.net/FixtureDefinition">
  <Creator>
   <Name>Q Light Controller Plus</Name>
-  <Version>4.3.1</Version>
+  <Version>4.7.0</Version>
   <Author>David Kuder</Author>
  </Creator>
  <Manufacturer>American DJ</Manufacturer>
@@ -108,7 +109,7 @@
  <Mode Name="18 Channels">
   <Physical>
    <Bulb Lumens="0" Type="LED" ColourTemperature="0"/>
-   <Dimensions Width="1025" Height="65" Weight="3" Depth="88"/>
+   <Dimensions Width="1025" Height="65" Weight="3.6" Depth="88"/>
    <Lens DegreesMax="0" Name="Other" DegreesMin="0"/>
    <Focus PanMax="0" Type="Fixed" TiltMax="0"/>
    <Technical PowerConsumption="30" DmxConnector="3-pin"/>
@@ -133,20 +134,50 @@
   <Channel Number="17">Strobing</Channel>
   <Head>
    <Channel>0</Channel>
+  </Head>
+  <Head>
    <Channel>1</Channel>
+  </Head>
+  <Head>
    <Channel>2</Channel>
+  </Head>
+  <Head>
    <Channel>3</Channel>
+  </Head>
+  <Head>
    <Channel>4</Channel>
+  </Head>
+  <Head>
    <Channel>5</Channel>
+  </Head>
+  <Head>
    <Channel>6</Channel>
+  </Head>
+  <Head>
    <Channel>7</Channel>
+  </Head>
+  <Head>
    <Channel>8</Channel>
+  </Head>
+  <Head>
    <Channel>9</Channel>
+  </Head>
+  <Head>
    <Channel>10</Channel>
+  </Head>
+  <Head>
    <Channel>11</Channel>
+  </Head>
+  <Head>
    <Channel>12</Channel>
+  </Head>
+  <Head>
    <Channel>13</Channel>
+  </Head>
+  <Head>
    <Channel>14</Channel>
+  </Head>
+  <Head>
    <Channel>15</Channel>
   </Head>
  </Mode>

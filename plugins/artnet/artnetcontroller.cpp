@@ -1,6 +1,6 @@
 /*
   Q Light Controller Plus
-  artnetnode.cpp
+  artnetcontroller.cpp
 
   Copyright (c) Massimo Callegari
 
@@ -22,10 +22,12 @@
 #include <QDebug>
 
 ArtNetController::ArtNetController(QString ipaddr, QList<QNetworkAddressEntry> interfaces,
-                                   QList<QString> macAddrList, Type type, QObject *parent)
+                                   QString macAddress, Type type, quint32 line, QObject *parent)
     : QObject(parent)
 {
     m_ipAddr = QHostAddress(ipaddr);
+    m_MACAddress = macAddress;
+    m_line = line;
 
     int i = 0;
     foreach(QNetworkAddressEntry iface, interfaces)
@@ -33,7 +35,6 @@ ArtNetController::ArtNetController(QString ipaddr, QList<QNetworkAddressEntry> i
         if (iface.ip() == m_ipAddr)
         {
             m_broadcastAddr = iface.broadcast();
-            m_MACAddress = macAddrList.at(i);
             break;
         }
         i++;
@@ -44,6 +45,8 @@ ArtNetController::ArtNetController(QString ipaddr, QList<QNetworkAddressEntry> i
     m_packetizer = new ArtNetPacketizer();
     m_packetSent = 0;
     m_packetReceived = 0;
+    m_inputRefCount = 0;
+    m_outputRefCount = 0;
 
     m_UdpSocket = new QUdpSocket(this);
 
@@ -68,10 +71,12 @@ ArtNetController::ArtNetController(QString ipaddr, QList<QNetworkAddressEntry> i
         }
         else
             m_packetSent++;
+        m_outputRefCount = 1;
     }
     else
     {
-        m_dmxValues.fill(0, 2048);
+        m_dmxValues.fill(0, 512);
+        m_inputRefCount = 1;
     }
 
     m_type = type;
@@ -85,32 +90,12 @@ ArtNetController::~ArtNetController()
     m_UdpSocket->close();
 }
 
-void ArtNetController::addUniverse(quint32 line, int uni)
+void ArtNetController::setType(Type type)
 {
-    if (m_universes.contains(uni) == false)
-    {
-        m_universes[uni] = line;
-        qDebug() << "[ArtNetController::addUniverse] Added new universe: " << uni;
-    }
+    m_type = type;
 }
 
-int ArtNetController::getUniversesNumber()
-{
-    return m_universes.size();
-}
-
-bool ArtNetController::removeUniverse(int uni)
-{
-    if (m_universes.contains(uni))
-    {
-
-        qDebug() << Q_FUNC_INFO << "Removing universe " << uni;
-        return m_universes.remove(uni);
-    }
-    return false;
-}
-
-int ArtNetController::getType()
+ArtNetController::Type ArtNetController::type()
 {
     return m_type;
 }
@@ -125,6 +110,25 @@ quint64 ArtNetController::getPacketReceivedNumber()
     return m_packetReceived;
 }
 
+void ArtNetController::changeReferenceCount(ArtNetController::Type type, int amount)
+{
+    if (type == Input)
+    {
+        m_inputRefCount += amount;
+        m_dmxValues.resize(m_inputRefCount * 512);
+    }
+    else
+        m_outputRefCount += amount;
+}
+
+int ArtNetController::referenceCount(ArtNetController::Type type)
+{
+    if (type == Input)
+        return m_inputRefCount;
+    else
+        return m_outputRefCount;
+}
+
 QString ArtNetController::getNetworkIP()
 {
     return m_ipAddr.toString();
@@ -135,7 +139,7 @@ QHash<QHostAddress, ArtNetNodeInfo> ArtNetController::getNodesList()
     return m_nodesList;
 }
 
-void ArtNetController::sendDmx(const int &universe, const QByteArray &data)
+void ArtNetController::sendDmx(const quint32 universe, const QByteArray &data)
 {
     QByteArray dmxPacket;
     m_packetizer->setupArtNetDmx(dmxPacket, universe, data);
@@ -161,75 +165,79 @@ void ArtNetController::processPendingPackets()
         m_UdpSocket->readDatagram(datagram.data(), datagram.size(), &senderAddress);
         if (senderAddress != m_ipAddr)
         {
-            qDebug() << "Received packet with size: " << datagram.size() << ", host: " << senderAddress.toString();
+            //qDebug() << "Received packet with size: " << datagram.size() << ", host: " << senderAddress.toString();
             int opCode = -1;
             if (m_packetizer->checkPacketAndCode(datagram, opCode) == true)
             {
+                m_packetReceived++;
                 switch (opCode)
                 {
                     case ARTNET_POLLREPLY:
                     {
-                        qDebug() << "ArtPollReply received";
+                        qDebug() << "[ArtNet] ArtPollReply received";
                         ArtNetNodeInfo newNode;
                         if (m_packetizer->fillArtPollReplyInfo(datagram, newNode) == true)
                         {
                             if (m_nodesList.contains(senderAddress) == false)
                                 m_nodesList[senderAddress] = newNode;
                         }
-                        QByteArray pollReplyPacket;
-                        m_packetizer->setupArtNetPollReply(pollReplyPacket, m_ipAddr, m_MACAddress);
-                        m_UdpSocket->writeDatagram(pollReplyPacket.data(), pollReplyPacket.size(),
-                                                   senderAddress, ARTNET_DEFAULT_PORT);
-                        m_packetReceived++;
-                        m_packetSent++;
                     }
                     break;
                     case ARTNET_POLL:
                     {
-                        qDebug() << "ArtPoll received";
+                        qDebug() << "[ArtNet] ArtPoll received";
                         QByteArray pollReplyPacket;
                         m_packetizer->setupArtNetPollReply(pollReplyPacket, m_ipAddr, m_MACAddress);
                         m_UdpSocket->writeDatagram(pollReplyPacket.data(), pollReplyPacket.size(),
                                                    senderAddress, ARTNET_DEFAULT_PORT);
-                        m_packetReceived++;
                         m_packetSent++;
                     }
                     break;
                     case ARTNET_DMX:
                     {
-                        qDebug() << "DMX data received";
                         QByteArray dmxData;
-                        int universe;
-                        if (this->getType() == Input)
+                        quint32 universe;
+                        if (this->type() == Input)
                         {
-                            m_packetReceived++;
                             if (m_packetizer->fillDMXdata(datagram, dmxData, universe) == true)
                             {
-                                if ((universe * 512) > m_dmxValues.length() || m_universes.contains(universe) == false)
-                                {
-                                    qDebug() << "Universe " << universe << "not supported !";
+                                qDebug() << "[ArtNet] DMX data received. Universe:" << universe << "Data size:" << dmxData.size();
+                                if (universe >= (quint32)m_inputRefCount)
                                     break;
-                                }
-                                for (int i = 0; i < dmxData.length(); i++)
+
+                                quint32 uniAddr = universe << 9;
+                                //quint32 emitStartAddr = UINT_MAX;
+                                for (quint32 i = 0; i < (quint32)dmxData.length(); i++)
                                 {
-                                    if (m_dmxValues.at(i + (universe * 512)) != dmxData.at(i))
+                                    if (m_dmxValues.at(uniAddr + i) != dmxData.at(i))
                                     {
-                                        m_dmxValues[i + (universe * 512)] =  dmxData[i];
-                                        emit valueChanged(m_universes[universe], i, (uchar)dmxData.at(i));
+                                        m_dmxValues[uniAddr + i] = dmxData[i];
+                                        //if (emitStartAddr == UINT_MAX)
+                                        //    emitStartAddr = (quint32)i;
+                                        emit valueChanged(universe, m_line, i, (uchar)dmxData.at(i));
                                     }
+                                    /*
+                                    else
+                                    {
+                                        if (emitStartAddr != UINT_MAX)
+                                        {
+                                            // SIGNAL is: void valuesChanged(quint32 input, quint32 startChannel, QByteArray &values);
+                                            emit valuesChanged(universe, emitStartAddr, m_dmxValues.mid(emitStartAddr, i - emitStartAddr));
+                                        }
+                                    }
+                                    */
                                 }
                             }
                         }
                     }
                     break;
                     default:
-                        qDebug() << "opCode not supported yet (" << opCode << ")";
-                        m_packetReceived++;
+                        qDebug() << "[ArtNet] opCode not supported yet (" << opCode << ")";
                     break;
                 }
             }
             else
-                qDebug() << "Malformed packet received";
+                qDebug() << "[ArtNet] Malformed packet received";
         }
      }
 }

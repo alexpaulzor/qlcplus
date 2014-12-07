@@ -26,6 +26,7 @@
 #include "qlcfixturemode.h"
 #include "qlcfixturedef.h"
 #include "channelsgroup.h"
+#include "inputpatch.h"
 #include "fixture.h"
 #include "doc.h"
 
@@ -207,7 +208,7 @@ void AddChannelsGroup::slotItemChecked(QTreeWidgetItem *item, int col)
 
         QString manufacturer = def->manufacturer();
         QString model = def->model();
-        QString mode = fixture->fixtureMode()->name();
+        QString mode = fixture->fixtureMode() ? fixture->fixtureMode()->name() : "";
 
         int chIdx = item->text(KColumnChIdx).toInt();
         Qt::CheckState enable = item->checkState(KColumnGroup);
@@ -224,7 +225,7 @@ void AddChannelsGroup::slotItemChecked(QTreeWidgetItem *item, int col)
                 Fixture *fxi = m_doc->fixture(fxID);
                 if (fxi != NULL)
                 {
-                    QString tmpMode = fxi->fixtureMode()->name();
+                    QString tmpMode = fxi->fixtureMode() ? fxi->fixtureMode()->name() : "";
                     const QLCFixtureDef *tmpDef = fxi->fixtureDef();
                     if (tmpDef != NULL)
                     {
@@ -260,28 +261,28 @@ void AddChannelsGroup::slotAutoDetectInputToggled(bool checked)
 {
     if (checked == true)
     {
-        connect(m_doc->inputMap(), SIGNAL(inputValueChanged(quint32,quint32,uchar)),
+        connect(m_doc->inputOutputMap(), SIGNAL(inputValueChanged(quint32,quint32,uchar)),
                 this, SLOT(slotInputValueChanged(quint32,quint32)));
     }
     else
     {
-        disconnect(m_doc->inputMap(), SIGNAL(inputValueChanged(quint32,quint32,uchar)),
+        disconnect(m_doc->inputOutputMap(), SIGNAL(inputValueChanged(quint32,quint32,uchar)),
                    this, SLOT(slotInputValueChanged(quint32,quint32)));
     }
 }
 
 void AddChannelsGroup::slotInputValueChanged(quint32 universe, quint32 channel)
 {
-    m_inputSource = QLCInputSource(universe, channel);
+    m_inputSource = new QLCInputSource(universe, channel);
     updateInputSource();
 }
 
 void AddChannelsGroup::slotChooseInputClicked()
 {
-    SelectInputChannel sic(this, m_doc->inputMap());
+    SelectInputChannel sic(this, m_doc->inputOutputMap());
     if (sic.exec() == QDialog::Accepted)
     {
-        m_inputSource = QLCInputSource(sic.universe(), sic.channel());
+        m_inputSource = new QLCInputSource(sic.universe(), sic.channel());
         updateInputSource();
     }
 }
@@ -291,7 +292,7 @@ void AddChannelsGroup::updateInputSource()
     QString uniName;
     QString chName;
 
-    if (m_doc->inputMap()->inputSourceNames(m_inputSource, uniName, chName) == false)
+    if (m_doc->inputOutputMap()->inputSourceNames(m_inputSource, uniName, chName) == false)
     {
         uniName = KInputNone;
         chName = KInputNone;

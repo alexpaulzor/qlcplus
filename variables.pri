@@ -4,7 +4,7 @@
 
 APPNAME    = Q Light Controller Plus
 FXEDNAME   = Fixture Definition Editor
-APPVERSION = 4.6.1
+APPVERSION = 4.8.3 GIT
 
 #############################################################################
 # Compiler & linker configuration
@@ -18,8 +18,12 @@ CONFIG         += warn_on
 # Build everything in the order specified in .pro files
 CONFIG         += ordered
 
-CONFIG         -= release # Enable this when making a release
-CONFIG         += debug   # Disable this when making a release
+# Enable the following 2 lines when making a release
+CONFIG         -= release
+#DEFINES        += QT_NO_DEBUG_OUTPUT
+
+# Disable this when making a release
+CONFIG         += debug
 
 # Disable these if you don't want to see SVN revision in the About Box
 #unix:REVISION = $$system(svn info | grep "Revision" | sed 's/Revision://')
@@ -93,6 +97,16 @@ win32:USERMIDITEMPLATEDIR      = $$USERDATADIR/MidiTemplates
 unix:!macx:USERMIDITEMPLATEDIR = $$USERDATADIR/miditemplates
 macx:USERMIDITEMPLATEDIR       = $$USERDATADIR/MidiTemplates
 
+# Channel modifiers templates
+win32:MODIFIERSTEMPLATEDIR      = ModifiersTemplates
+unix:!macx:MODIFIERSTEMPLATEDIR = $$DATADIR/modifierstemplates
+macx:MODIFIERSTEMPLATEDIR       = $$DATADIR/ModifiersTemplates
+
+# User midi templates
+win32:USERMODIFIERSTEMPLATEDIR      = $$USERDATADIR/ModifiersTemplates
+unix:!macx:USERMODIFIERSTEMPLATEDIR = $$USERDATADIR/modifierstemplates
+macx:USERMODIFIERSTEMPLATEDIR       = $$USERDATADIR/ModifiersTemplates
+
 # Fixtures
 win32:FIXTUREDIR      = Fixtures
 unix:!macx:FIXTUREDIR = $$DATADIR/fixtures
@@ -111,7 +125,7 @@ macx:USERFIXTUREDIR       = $$USERDATADIR/Fixtures
 # Plugins
 win32:PLUGINDIR      = Plugins
 unix:!macx:PLUGINDIR = $$LIBSDIR/qt4/plugins/qlcplus
-macx:PLUGINDIR       = Plugins
+macx:PLUGINDIR       = PlugIns
 
 # Translations
 win32:TRANSLATIONDIR      =
@@ -127,3 +141,8 @@ macx:RGBSCRIPTDIR       = $$DATADIR/RGBScripts
 win32:USERRGBSCRIPTDIR      = $$USERDATADIR/RGBScripts
 unix:!macx:USERRGBSCRIPTDIR = $$USERDATADIR/rgbscripts
 macx:USERRGBSCRIPTDIR       = $$USERDATADIR/RGBScripts
+
+# RGB Scripts
+win32:WEBFILESDIR      = Web
+unix:!macx:WEBFILESDIR = $$DATADIR/web
+macx:WEBFILESDIR       = $$DATADIR/Web

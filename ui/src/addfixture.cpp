@@ -35,9 +35,9 @@
 #include "qlcfixturemode.h"
 #include "qlcfixturedef.h"
 
+#include "addresstool.h"
 #include "outputpatch.h"
 #include "addfixture.h"
-#include "outputmap.h"
 #include "apputil.h"
 #include "doc.h"
 
@@ -88,6 +88,8 @@ AddFixture::AddFixture(QWidget* parent, const Doc* doc, const Fixture* fxi)
             this, SLOT(slotAmountSpinChanged(int)));
     connect(m_searchEdit, SIGNAL(textChanged(QString)),
             this, SLOT(slotSearchFilterChanged(QString)));
+    connect(m_diptoolButton, SIGNAL(clicked()),
+            this, SLOT(slotDiptoolButtonClicked()));
 
     /* Fill fixture definition tree (and select a fixture def) */
     if (fxi != NULL && fxi->isDimmer() == false)
@@ -98,7 +100,7 @@ AddFixture::AddFixture(QWidget* parent, const Doc* doc, const Fixture* fxi)
     m_fixturesCount->setText(tr("Fixtures found: %1").arg(m_fxiCount));
 
     /* Fill universe combo with available universes */
-    m_universeCombo->addItems(m_doc->outputMap()->universeNames());
+    m_universeCombo->addItems(m_doc->inputOutputMap()->universeNames());
 
     /* Simulate first selection and find the next free address */
     slotSelectionChanged();
@@ -367,7 +369,7 @@ void AddFixture::findAddress()
        channels, leaving z channels gap in-between. */
     quint32 address = findAddress((m_channelsValue + m_gapValue) * m_amountValue,
                                   m_doc->fixtures(),
-                                  m_doc->outputMap()->universes());
+                                  m_doc->inputOutputMap()->universes());
 
     /* Set the address only if the channel space was really found */
     if (address != QLCChannel::invalid())
@@ -674,4 +676,11 @@ void AddFixture::slotTreeDoubleClicked(QTreeWidgetItem* item)
     slotSelectionChanged();
     if (item != NULL && item->parent() != NULL)
         accept();
+}
+
+void AddFixture::slotDiptoolButtonClicked()
+{
+    AddressTool at(this, m_addressSpin->value());
+    at.exec();
+    m_addressSpin->setValue(at.getAddress());
 }

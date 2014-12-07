@@ -165,22 +165,22 @@ QString QLCPhysical::lensName() const
     return m_lensName;
 }
 
-void QLCPhysical::setLensDegreesMin(int degrees)
+void QLCPhysical::setLensDegreesMin(qreal degrees)
 {
     m_lensDegreesMin = degrees;
 }
 
-int QLCPhysical::lensDegreesMin() const
+qreal QLCPhysical::lensDegreesMin() const
 {
     return m_lensDegreesMin;
 }
 
-void QLCPhysical::setLensDegreesMax(int degrees)
+void QLCPhysical::setLensDegreesMax(qreal degrees)
 {
     m_lensDegreesMax = degrees;
 }
 
-int QLCPhysical::lensDegreesMax() const
+qreal QLCPhysical::lensDegreesMax() const
 {
     return m_lensDegreesMax;
 }
@@ -282,8 +282,8 @@ bool QLCPhysical::loadXML(const QDomElement& root)
         else if (tag.tagName() == KXMLQLCPhysicalLens)
         {
             m_lensName = tag.attribute(KXMLQLCPhysicalLensName);
-            m_lensDegreesMin = tag.attribute(KXMLQLCPhysicalLensDegreesMin).toInt();
-            m_lensDegreesMax = tag.attribute(KXMLQLCPhysicalLensDegreesMax).toInt();
+            m_lensDegreesMin = tag.attribute(KXMLQLCPhysicalLensDegreesMin).toDouble();
+            m_lensDegreesMax = tag.attribute(KXMLQLCPhysicalLensDegreesMax).toDouble();
         }
         else if (tag.tagName() == KXMLQLCPhysicalFocus)
         {
@@ -330,7 +330,7 @@ bool QLCPhysical::saveXML(QDomDocument* doc, QDomElement* root)
 
     /* Dimensions */
     subtag = doc->createElement(KXMLQLCPhysicalDimensions);
-    subtag.setAttribute(KXMLQLCPhysicalDimensionsWeight, m_weight);
+    subtag.setAttribute(KXMLQLCPhysicalDimensionsWeight, QString::number(m_weight));
     subtag.setAttribute(KXMLQLCPhysicalDimensionsWidth, m_width);
     subtag.setAttribute(KXMLQLCPhysicalDimensionsHeight, m_height);
     subtag.setAttribute(KXMLQLCPhysicalDimensionsDepth, m_depth);
@@ -339,8 +339,8 @@ bool QLCPhysical::saveXML(QDomDocument* doc, QDomElement* root)
     /* Lens */
     subtag = doc->createElement(KXMLQLCPhysicalLens);
     subtag.setAttribute(KXMLQLCPhysicalLensName, m_lensName);
-    subtag.setAttribute(KXMLQLCPhysicalLensDegreesMin, m_lensDegreesMin);
-    subtag.setAttribute(KXMLQLCPhysicalLensDegreesMax, m_lensDegreesMax);
+    subtag.setAttribute(KXMLQLCPhysicalLensDegreesMin, QString::number(m_lensDegreesMin));
+    subtag.setAttribute(KXMLQLCPhysicalLensDegreesMax, QString::number(m_lensDegreesMax));
     tag.appendChild(subtag);
 
     /* Focus */

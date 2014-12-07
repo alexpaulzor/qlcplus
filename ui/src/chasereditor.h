@@ -20,7 +20,6 @@
 #ifndef CHASEREDITOR_H
 #define CHASEREDITOR_H
 
-#include <QPointer>
 #include <QWidget>
 #include "ui_chasereditor.h"
 #include "scene.h"
@@ -28,12 +27,14 @@
 
 class Chaser;
 class Function;
-class InputMap;
-class OutputMap;
 class ChaserStep;
 class MasterTimer;
 class SpeedDialWidget;
 class QTreeWidgetItem;
+
+/** @addtogroup ui_functions
+ * @{
+ */
 
 class ChaserEditor : public QWidget, public Ui_ChaserEditor
 {
@@ -46,6 +47,16 @@ class ChaserEditor : public QWidget, public Ui_ChaserEditor
 public:
     ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveMode = false);
     ~ChaserEditor();
+
+    /** Set the visible state of the Order and
+     *  Direction group boxes */
+    void showOrderAndDirection(bool show);
+
+    void stopTest();
+
+    /** Select the step at the given time
+     *  and scroll the view to it */
+    void selectStepAtTime(quint32 time);
 
 signals:
     void applyValues(QList<SceneValue>&);
@@ -86,7 +97,6 @@ private slots:
     void slotPasteClicked();
 
 private:
-    //QList <ChaserStep> m_clipboard;
     QAction* m_cutAction;
     QAction* m_copyAction;
     QAction* m_pasteAction;
@@ -98,6 +108,7 @@ private slots:
     void slotLoopClicked();
     void slotSingleShotClicked();
     void slotPingPongClicked();
+    void slotRandomClicked();
     void slotForwardClicked();
     void slotBackwardClicked();
 
@@ -113,12 +124,14 @@ private slots:
     void slotFadeOutToggled();
     void slotDurationToggled();
 
+    void slotDialDestroyed(QObject* dial);
+
 private:
     void createSpeedDials();
     void updateSpeedDials();
 
 private:
-    QPointer<SpeedDialWidget> m_speedDials;
+    SpeedDialWidget *m_speedDials;
 
     /************************************************************************
      * Test
@@ -171,5 +184,7 @@ private:
 private:
     bool m_liveMode;
 };
+
+/** @} */
 
 #endif

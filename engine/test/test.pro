@@ -1,5 +1,4 @@
 TEMPLATE = subdirs
-CONFIG  += ordered
 SUBDIRS += bus
 SUBDIRS += chaser
 SUBDIRS += chaserrunner
@@ -15,10 +14,10 @@ SUBDIRS += fixture
 SUBDIRS += fixturegroup
 SUBDIRS += function
 SUBDIRS += genericfader
-SUBDIRS += inputmap
+SUBDIRS += grandmaster
+SUBDIRS += inputoutputmap
 SUBDIRS += inputpatch
 SUBDIRS += mastertimer
-SUBDIRS += outputmap
 SUBDIRS += outputpatch
 SUBDIRS += qlccapability
 SUBDIRS += qlcchannel
@@ -40,7 +39,7 @@ SUBDIRS += rgbtext
 SUBDIRS += scene
 SUBDIRS += scenevalue
 SUBDIRS += script
-SUBDIRS += universearray
+SUBDIRS += universe
 
 # Stubs
-SUBDIRS += outputpluginstub
+SUBDIRS += iopluginstub

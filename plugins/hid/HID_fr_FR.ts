@@ -6,12 +6,12 @@
     <message>
         <location filename="configurehid.ui" line="14"/>
         <source>Configure HID Plugin</source>
-        <translation>Configurer le greffon HID</translation>
+        <translation>Configuration du plugin HID</translation>
     </message>
     <message>
         <location filename="configurehid.ui" line="33"/>
         <source>Input Line</source>
-        <translation>N°</translation>
+        <translation>Ligne d&apos;entrée</translation>
     </message>
     <message>
         <location filename="configurehid.ui" line="38"/>
@@ -25,32 +25,37 @@
     </message>
 </context>
 <context>
-    <name>HID</name>
+    <name>HIDFX5Device</name>
     <message>
-        <location filename="hid.cpp" line="141"/>
-        <source>This plugin provides input support for HID-based joysticks.</source>
-        <translation>Ce grefon permet d&apos;utiliser des Joysticks HID.</translation>
+        <location filename="hidfx5device.cpp" line="61"/>
+        <source>FX5 USB DMX Interface Error</source>
+        <translation>Erreur de l&apos;interface FX5 USB DMX</translation>
     </message>
-</context>
-<context>
-    <name>HIDEventDevice</name>
     <message>
-        <location filename="hideventdevice.cpp" line="324"/>
-        <source>N/A</source>
-        <translation></translation>
+        <location filename="hidfx5device.cpp" line="62"/>
+        <source>Unable to open the FX5 Interface. Make sure the udev rule is installed.</source>
+        <translation>Impossible d&apos;ouvrir l&apos;interface FX5. Veuillez vous assurer que la règle udev est installée.</translation>
     </message>
 </context>
 <context>
     <name>HIDJsDevice</name>
     <message>
-        <location filename="hidjsdevice.cpp" line="186"/>
+        <location filename="hidjsdevice.cpp" line="313"/>
         <source>Axes: %1</source>
-        <translation>Axes: %1</translation>
+        <translation>Axes : %1</translation>
     </message>
     <message>
-        <location filename="hidjsdevice.cpp" line="188"/>
+        <location filename="hidjsdevice.cpp" line="315"/>
         <source>Buttons: %1</source>
         <translation>Boutons : %1</translation>
+    </message>
+</context>
+<context>
+    <name>HIDPlugin</name>
+    <message>
+        <location filename="hidplugin.cpp" line="115"/>
+        <source>This plugin provides support for HID-based joysticks and the FX5 USB DMX adapter.</source>
+        <translation>Ce plugin permet le support des joysticks HID et de l&apos;interface FX5 USB DMX.</translation>
     </message>
 </context>
 </TS>

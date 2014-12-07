@@ -6,7 +6,7 @@
 # and copied in /usr/bin
 #
 
-wkhtmltopdf-i386 --footer-center "Page [page]" --image-quality 100 \
+wkhtmltopdf-amd64 --footer-center "Page [page]" --image-quality 100 \
   pdf_cover.html \
   index_pdf.html \
   concept.html \
@@ -18,8 +18,10 @@ wkhtmltopdf-i386 --footer-center "Page [page]" --image-quality 100 \
   liveedit.html \
   fixturemanager.html \
   addeditfixtures.html \
+  addrgbpanel.html \
   fixturegroupeditor.html \
   channelsgroupeditor.html \
+  channelproperties.html \
   fixturesremap.html \
   howto-add-fixtures.html \
   functionmanager.html \
@@ -35,15 +37,16 @@ wkhtmltopdf-i386 --footer-center "Page [page]" --image-quality 100 \
   selectfixture.html \
   showmanager.html \
   virtualconsole.html \
+  vcframe.html \
+  vcsoloframe.html \
   vcbutton.html \
   vcbuttonmatrix.html \
   vcslider.html \
   vcslidermatrix.html \
+  vcmatrix.html \
   vcspeeddial.html \
-  vcxypad.html \
   vccuelist.html \
-  vcframe.html \
-  vcsoloframe.html \
+  vcxypad.html \
   vclabel.html \
   audiotriggers.html \
   selectinputchannel.html \
@@ -53,6 +56,8 @@ wkhtmltopdf-i386 --footer-center "Page [page]" --image-quality 100 \
   howto-input-profiles.html \
   artnetplugin.html \
   dmxusbplugin.html \
+  e131plugin.html \
+  hidplugin.html \
   midiplugin.html \
   olaplugin.html \
   oscplugin.html \
@@ -68,9 +73,11 @@ wkhtmltopdf-i386 --footer-center "Page [page]" --image-quality 100 \
   headeditor.html \
   tutorial.html \
   tutorial-multipage.html \
+  tutorial-soundcontrol.html \
   tutorial-bcf-lc2412.html \
   commandlineparameters.html \
   kioskmode.html \
+  webinterface.html \
   parameterstuning.html \
   guicustomstyles.html \
   QLC+.pdf

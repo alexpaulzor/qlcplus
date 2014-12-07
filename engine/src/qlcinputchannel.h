@@ -26,6 +26,10 @@ class QDomDocument;
 class QDomElement;
 class QString;
 
+/** @addtogroup engine Engine
+ * @{
+ */
+
 #define KXMLQLCInputChannel "Channel"
 #define KXMLQLCInputChannelName "Name"
 #define KXMLQLCInputChannelType "Type"
@@ -37,6 +41,9 @@ class QString;
 #define KXMLQLCInputChannelPageDown "Previous Page"
 #define KXMLQLCInputChannelPageSet "Page Set"
 #define KXMLQLCInputChannelNone "None"
+#define KXMLQLCInputChannelMovement "Movement"
+#define KXMLQLCInputChannelRelative "Relative"
+#define KXMLQLCInputChannelSensitivity "Sensitivity"
 
 class QLCInputChannel
 {
@@ -83,6 +90,14 @@ public:
     /** Get a list of available channel types */
     static QStringList types();
 
+    /** Get icon for a type */
+    static QIcon typeToIcon(Type type);
+
+    /** Get icon for a type */
+    static QIcon stringToIcon(const QString& str);
+
+    QIcon icon() const;
+
 protected:
     Type m_type;
 
@@ -98,6 +113,26 @@ public:
 
 protected:
     QString m_name;
+
+    /*********************************************************************
+     * Slider movement behaviour specific methods
+     *********************************************************************/
+public:
+    /** Movement behaviour */
+    enum MovementType {
+        Absolute = 0,
+        Relative = 1
+    };
+
+    MovementType movementType() const;
+    void setMovementType(MovementType type);
+
+    int movementSensitivity() const;
+    void setMovementSensitivity(int value);
+
+protected:
+    MovementType m_movementType;
+    int m_movementSensitivity;
 
     /********************************************************************
      * Load & Save
@@ -123,5 +158,7 @@ public:
     bool saveXML(QDomDocument* doc, QDomElement* root,
                  quint32 channelNumber) const;
 };
+
+/** @} */
 
 #endif

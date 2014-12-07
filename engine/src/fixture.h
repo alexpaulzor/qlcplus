@@ -23,8 +23,25 @@
 #include <QObject>
 #include <QList>
 #include <QIcon>
+#include <QHash>
 
 #include "qlcchannel.h"
+
+class QDomDocument;
+class QDomElement;
+class QString;
+
+class QLCFixtureDefCache;
+class ChannelModifier;
+class QLCFixtureMode;
+class QLCFixtureHead;
+class FixtureConsole;
+class QLCFixtureDef;
+class Doc;
+
+/** @addtogroup engine Engine
+ * @{
+ */
 
 #define KXMLFixture "Fixture"
 #define KXMLFixtureName "Name"
@@ -32,20 +49,16 @@
 #define KXMLFixtureAddress "Address"
 #define KXMLFixtureID "ID"
 #define KXMLFixtureGeneric "Generic"
+#define KXMLFixtureRGBPanel "RGBPanel"
 #define KXMLFixtureChannels "Channels"
 #define KXMLFixtureDimmer "Dimmer"
 #define KXMLFixtureExcludeFade "ExcludeFade"
+#define KXMLFixtureForcedHTP "ForcedHTP"
+#define KXMLFixtureForcedLTP "ForcedLTP"
 
-class QDomDocument;
-class QDomElement;
-class QString;
-
-class QLCFixtureDefCache;
-class QLCFixtureMode;
-class QLCFixtureHead;
-class FixtureConsole;
-class QLCFixtureDef;
-class Doc;
+#define KXMLFixtureChannelModifier "Modifier"
+#define KXMLFixtureChannelIndex "Channel"
+#define KXMLFixtureModifierName "Name"
 
 class Fixture : public QObject
 {
@@ -265,15 +278,15 @@ public:
     quint32 masterIntensityChannel(int head = 0) const;
 
     /** @see QLCFixtureHead */
-    QList <quint32> rgbChannels(int head = 0) const;
+    QVector <quint32> rgbChannels(int head = 0) const;
 
     /** @see QLCFixtureHead */
-    QList <quint32> cmyChannels(int head = 0) const;
+    QVector <quint32> cmyChannels(int head = 0) const;
 
-    /** Set a list of channel indexes to exclude from fade transitions */
-    void setExcludeFadeChannels(QList<int> indexes);
+    /** Set a list of channel indices to exclude from fade transitions */
+    void setExcludeFadeChannels(QList<int> indices);
 
-    /** Get the list of channel indexes to exclude from fade transitions */
+    /** Get the list of channel indices to exclude from fade transitions */
     QList<int> excludeFadeChannels();
 
     /** Add a channel index to exclude from fade transitions */
@@ -281,6 +294,25 @@ public:
 
     /** Check if a channel can be faded or not */
     bool channelCanFade(int index);
+
+    /** Set a list of channel indices that are forced to be HTP */
+    void setForcedHTPChannels(QList<int> indices);
+
+    /** Get a list of channel indices that are forced to be HTP */
+    QList<int> forcedHTPChannels();
+
+    /** Set a list of channel indices that are forced to be LTP */
+    void setForcedLTPChannels(QList<int> indices);
+
+    /** Get a list of channel indices that are forced to be LTP */
+    QList<int> forcedLTPChannels();
+
+    /** Set a ChannelModifier to the channel with the given $idx */
+    void setChannelModifier(quint32 idx, ChannelModifier *mod);
+
+    /** Get the ChannelModifier for the channel with the given $idx.
+     *  Returns NULL if no modifier has been assigned */
+    ChannelModifier *channelModifier(quint32 idx);
 
 protected:
     /** Create a generic intensity channel */
@@ -299,8 +331,19 @@ protected:
     /** Generic intensity channel for dimmer fixtures */
     QLCChannel* m_genericChannel;
 
-    /** List holding the channels indexes to exlude from fade transitions */
-    QList<int> m_excludeFadeIndexes;
+    /** List holding the channels indices to exlude from fade transitions */
+    QList<int> m_excludeFadeIndices;
+
+    /** List holding the LTP channels indices that are forced to be HTP */
+    QList<int> m_forcedHTPIndices;
+
+    /** List holding the HTP channels indices that are forced to be LTP */
+    QList<int> m_forcedLTPIndices;
+
+    /** Hash holding the pair <channel index, modifier pointer>
+     *  This is basically the place to store them to be saved/loaded
+     *  on the project XML file */
+    QHash<quint32, ChannelModifier*> m_channelModifiers;
 
     /*********************************************************************
      * Fixture definition
@@ -352,12 +395,24 @@ public:
 
     QIcon getIconFromType(QString type) const;
 
+    QRectF degreesRange(int head) const;
+
 protected:
     /** The fixture definition that this instance is based on */
     QLCFixtureDef* m_fixtureDef;
 
     /** The mode within the fixture definition that this instance uses */
     QLCFixtureMode* m_fixtureMode;
+
+    /*********************************************************************
+     * Generic RGB panel
+     *********************************************************************/
+public:
+    /** Creates and returns a definition for a generic RGB panel row */
+    QLCFixtureDef *genericRGBPanelDef(int columns);
+
+    /** Creates and returns a fixture mode for a generic RGB panel row */
+    QLCFixtureMode *genericRGBPanelMode(QLCFixtureDef *def, quint32 width, quint32 height);
 
     /*********************************************************************
      * Load & Save
@@ -401,6 +456,8 @@ public:
      */
     QString status() const;
 };
+
+/** @} */
 
 #endif
 

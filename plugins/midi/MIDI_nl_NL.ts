@@ -52,55 +52,55 @@
 <context>
     <name>MidiPlugin</name>
     <message>
-        <location filename="common/midiplugin.cpp" line="132"/>
+        <location filename="common/midiplugin.cpp" line="134"/>
         <source>This plugin provides input/output support for MIDI devices.</source>
         <translation>Deze plugin verzorgt input/output voor MIDI apparaten.</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="146"/>
+        <location filename="common/midiplugin.cpp" line="148"/>
         <source>No output support available.</source>
         <translation>Output niet ondersteund.</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="154"/>
+        <location filename="common/midiplugin.cpp" line="156"/>
         <source>Output</source>
         <translation>Output</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="157"/>
-        <location filename="common/midiplugin.cpp" line="259"/>
+        <location filename="common/midiplugin.cpp" line="159"/>
+        <location filename="common/midiplugin.cpp" line="264"/>
         <source>Open</source>
         <translation>Open</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="159"/>
-        <location filename="common/midiplugin.cpp" line="261"/>
+        <location filename="common/midiplugin.cpp" line="161"/>
+        <location filename="common/midiplugin.cpp" line="266"/>
         <source>Not Open</source>
         <translation>Ongeopend</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="160"/>
-        <location filename="common/midiplugin.cpp" line="262"/>
+        <location filename="common/midiplugin.cpp" line="162"/>
+        <location filename="common/midiplugin.cpp" line="267"/>
         <source>Status</source>
         <translation>Status</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="166"/>
+        <location filename="common/midiplugin.cpp" line="168"/>
         <source>Invalid Output</source>
-        <translation>Ongeldige Output</translation>
+        <translation>Ongeldige output</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="248"/>
+        <location filename="common/midiplugin.cpp" line="253"/>
         <source>No input support available.</source>
         <translation>Input niet ondersteund.</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="256"/>
+        <location filename="common/midiplugin.cpp" line="261"/>
         <source>Input</source>
         <translation>Input</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="268"/>
+        <location filename="common/midiplugin.cpp" line="273"/>
         <source>Invalid Input</source>
         <translation>Input niet ondersteund</translation>
     </message>
@@ -108,82 +108,82 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="116"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="125"/>
         <source>No error occurred.</source>
         <translation>Er is geen fout opgetreden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="118"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="127"/>
         <source>An error occurred when reading from the file.</source>
         <translation>Er is een fout opgetreden tijdens het lezen van het bestand.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="120"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="129"/>
         <source>An error occurred when writing to the file.</source>
         <translation>Er is een fout opgetreden tijdens het schrijven naar het bestand.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="122"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="131"/>
         <source>A fatal error occurred.</source>
         <translation>Er is een fatale fout opgetreden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="124"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="133"/>
         <source>Resource error occurred.</source>
         <translation>Er is een resource fout opgetreden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="126"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="135"/>
         <source>The file could not be opened.</source>
         <translation>Het bestand kan niet geopend worden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="128"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="137"/>
         <source>The operation was aborted.</source>
         <translation>De bewerking is afgebroken.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="130"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="139"/>
         <source>A timeout occurred.</source>
-        <translation>Eris een timeout opgetreden.</translation>
+        <translation>Er is een time-out opgetreden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="132"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="141"/>
         <source>An unspecified error occurred.</source>
         <translation>Er is een onbekende fout opgetreden. </translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="134"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="143"/>
         <source>The file could not be removed.</source>
         <translation>Het bestand kan niet worden verwijderd.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="136"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="145"/>
         <source>The file could not be renamed.</source>
-        <translation>Het bestand kan niet hernoemt worden.</translation>
+        <translation>Het bestand kan niet hernoemd worden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="138"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="147"/>
         <source>The position in the file could not be changed.</source>
         <translation>De positie in het bestand kan niet veranderd worden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="140"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="149"/>
         <source>The file could not be resized.</source>
         <translation>Het bestand kan niet van grootte veranderd worden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="142"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="151"/>
         <source>The file could not be accessed.</source>
         <translation>Het bestand kan niet benaderd worden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="144"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="153"/>
         <source>The file could not be copied.</source>
         <translation>Het bestand kan niet gekopieerd worden.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="146"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="155"/>
         <source>An unknown error occurred.</source>
         <translation>Er is een onbekende fout opgetreden.</translation>
     </message>

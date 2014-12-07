@@ -30,7 +30,6 @@
 #include "qlcinputchannel.h"
 #include "qlcioplugin.h"
 #include "inputpatch.h"
-#include "inputmap.h"
 
 #define GRACE_MS 1
 
@@ -44,7 +43,6 @@ InputPatch::InputPatch(quint32 inputUniverse, QObject* parent)
     , m_plugin(NULL)
     , m_input(QLCIOPlugin::invalidLine())
     , m_profile(NULL)
-    , m_currentPage(0)
     , m_nextPageCh(USHRT_MAX)
     , m_prevPageCh(USHRT_MAX)
     , m_pageSetCh(USHRT_MAX)
@@ -62,12 +60,14 @@ InputPatch::~InputPatch()
  * Properties
  *****************************************************************************/
 
-void InputPatch::set(QLCIOPlugin* plugin, quint32 input, QLCInputProfile* profile)
+bool InputPatch::set(QLCIOPlugin* plugin, quint32 input, QLCInputProfile* profile)
 {
+    bool result = false;
+
     if (m_plugin != NULL && m_input != QLCIOPlugin::invalidLine())
     {
-        disconnect(m_plugin, SIGNAL(valueChanged(quint32,quint32,uchar,QString)),
-                   this, SLOT(slotValueChanged(quint32,quint32,uchar,QString)));
+        disconnect(m_plugin, SIGNAL(valueChanged(quint32,quint32,quint32,uchar,QString)),
+                   this, SLOT(slotValueChanged(quint32,quint32,quint32,uchar,QString)));
         m_plugin->closeInput(m_input);
     }
 
@@ -78,9 +78,9 @@ void InputPatch::set(QLCIOPlugin* plugin, quint32 input, QLCInputProfile* profil
     /* Open the assigned plugin input */
     if (m_plugin != NULL && m_input != QLCIOPlugin::invalidLine())
     {
-        connect(m_plugin, SIGNAL(valueChanged(quint32,quint32,uchar,QString)),
-                this, SLOT(slotValueChanged(quint32,quint32,uchar,QString)));
-        m_plugin->openInput(m_input);
+        connect(m_plugin, SIGNAL(valueChanged(quint32,quint32,quint32,uchar,QString)),
+                this, SLOT(slotValueChanged(quint32,quint32,quint32,uchar,QString)));
+        result = m_plugin->openInput(m_input);
 
         if (m_profile != NULL)
         {
@@ -101,9 +101,10 @@ void InputPatch::set(QLCIOPlugin* plugin, quint32 input, QLCInputProfile* profil
             }
         }
     }
+    return result;
 }
 
-void InputPatch::reconnect()
+bool InputPatch::reconnect()
 {
     if (m_plugin != NULL && m_input != QLCIOPlugin::invalidLine())
     {
@@ -113,8 +114,9 @@ void InputPatch::reconnect()
 #else
         usleep(GRACE_MS * 1000);
 #endif
-        m_plugin->openInput(m_input);
+        return m_plugin->openInput(m_input);
     }
+    return false;
 }
 
 QLCIOPlugin* InputPatch::plugin() const
@@ -160,42 +162,19 @@ QString InputPatch::profileName() const
         return KInputNone;
 }
 
-void InputPatch::slotValueChanged(quint32 input, quint32 channel, uchar value, const QString& key)
+bool InputPatch::isPatched() const
 {
-    // In case we have several lines connected from the same plugin, emit only
+    return input() != QLCIOPlugin::invalidLine();
+}
+ 
+void InputPatch::slotValueChanged(quint32 universe, quint32 input, quint32 channel,
+                                  uchar value, const QString& key)
+{
+    // In case we have several lines connected to the same plugin, emit only
     // such values that belong to this particular patch.
     if (input == m_input)
     {
-        if (channel == m_nextPageCh)
-        {
-            if (value > 0)
-            {
-                m_currentPage++;
-                emit inputValueChanged(m_inputUniverse, channel, m_currentPage);
-            }
-        }
-        else if(channel == m_prevPageCh && m_currentPage > 0)
-        {
-            if (value > 0)
-            {
-                m_currentPage--;
-                emit inputValueChanged(m_inputUniverse, channel, m_currentPage);
-            }
-        }
-        else if(channel == m_pageSetCh)
-        {
-            if (value > 0)
-            {
-                m_currentPage = value;
-                emit inputValueChanged(m_inputUniverse, channel, m_currentPage);
-            }
-        }
-        else
-            emit inputValueChanged(m_inputUniverse, ((quint32)m_currentPage << 16) | channel, value, key);
+        if (universe == UINT_MAX || (universe != UINT_MAX && universe == m_inputUniverse))
+        emit inputValueChanged(m_inputUniverse, channel, value, key);
     }
-}
-
-void InputPatch::setPage(int pageNum)
-{
-    m_currentPage = pageNum;
 }

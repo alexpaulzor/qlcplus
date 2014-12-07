@@ -22,7 +22,7 @@
 
 #include <QStringList>
 #include <QtPlugin>
-#include <QList>
+#include <QHash>
 
 #include "qlcioplugin.h"
 
@@ -59,12 +59,16 @@ public:
     /** @reimp */
     QString pluginInfo();
 
+    /** @reimp */
+    void setParameter(QString name, QVariant &value)
+    { Q_UNUSED(name); Q_UNUSED(value); }
+
     /*********************************************************************
      * Outputs
      *********************************************************************/
 public:
     /** @reimp */
-    void openOutput(quint32 output);
+    bool openOutput(quint32 output);
 
     /** @reimp */
     void closeOutput(quint32 output);
@@ -76,23 +80,23 @@ public:
     QString outputInfo(quint32 output);
 
     /** @reimp */
-    void writeUniverse(quint32 output, const QByteArray& universe);
+    void writeUniverse(quint32 universe, quint32 output, const QByteArray& data);
 
     /*************************************************************************
      * Inputs
      *************************************************************************/
 public:
     /** @reimp */
-    void openInput(quint32 input) { Q_UNUSED(input); }
+    bool openInput(quint32 input);
 
     /** @reimp */
-    void closeInput(quint32 input) { Q_UNUSED(input); }
+    void closeInput(quint32 input);
 
     /** @reimp */
-    QStringList inputs() { return QStringList(); }
+    QStringList inputs();
 
     /** @reimp */
-    QString inputInfo(quint32 input) { Q_UNUSED(input); return QString(); }
+    QString inputInfo(quint32 input);
 
     /** @reimp */
     void sendFeedBack(quint32 input, quint32 channel, uchar value, const QString& key)
@@ -116,11 +120,11 @@ public:
 
 protected:
     /** Get a PeperoniDevice entry by its usbdev struct */
-    PeperoniDevice* device(struct usb_device* usbdev);
+    bool device(struct usb_device* usbdev);
 
 protected:
     /** List of available devices */
-    QList <PeperoniDevice*> m_devices;
+    QHash <quint32, PeperoniDevice*> m_devices;
 };
 
 #endif

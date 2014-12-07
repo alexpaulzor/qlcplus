@@ -127,9 +127,16 @@ void QLCFixtureEditor::init()
     // When the def already has an author, disable the field to prevent modification.
     m_authorEdit->setText(m_fixtureDef->author());
     if (m_authorEdit->text().length() > 0)
-        m_authorEdit->setEnabled(false);
+    {
+        // Temporarily allow editing author name since most definitions contain wrong name:
+        // m_authorEdit->setEnabled(false); 
+    }
     else
+    {
         m_authorEdit->setText(QLCFile::currentUserName());
+    }
+    connect(m_authorEdit, SIGNAL(textEdited(const QString&)),
+            this, SLOT(slotAuthorTextEdited(const QString&)));
 
     /* Channel page */
     connect(m_addChannelButton, SIGNAL(clicked()),
@@ -370,6 +377,12 @@ void QLCFixtureEditor::slotModelTextEdited(const QString &text)
     setModified();
 }
 
+void QLCFixtureEditor::slotAuthorTextEdited(const QString &text)
+{
+    m_fixtureDef->setAuthor(text);
+    setModified();
+}
+
 void QLCFixtureEditor::slotTypeActivated(const QString &text)
 {
     m_fixtureDef->setType(text);
@@ -452,7 +465,7 @@ void QLCFixtureEditor::slotRemoveChannel()
     Q_ASSERT(channel != NULL);
 
     if (QMessageBox::question(this, "Remove Channel",
-                              tr("Are you sure you wish to remove channel: %1")
+                              tr("Are you sure you wish to remove channel: %1 ?")
                               .arg(channel->name()),
                               QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
     {
@@ -490,13 +503,30 @@ void QLCFixtureEditor::slotEditChannel()
     EditChannel ec(this, real);
     if (ec.exec() == QDialog::Accepted)
     {
-        // Copy the channel's contents to the real channel
-        *real = *(ec.channel());
+        if (m_fixtureDef->channel(ec.channel()->name()) != NULL && ec.channel()->name() != real->name())
+        {
+            QMessageBox::warning(this,
+                                 tr("Channel already exists"),
+                                 tr("A channel by the name \"%1\" already exists!")
+                                 .arg(ec.channel()->name()));
+        }
+        else if (ec.channel()->name().length() == 0)
+        {
+            QMessageBox::warning(this,
+                                 tr("Channel has no name"),
+                                 tr("You must give the channel a descriptive name!"));
+        }
+        else
+        {
+            // Copy the channel's contents to the real channel
+            *real = *(ec.channel());
 
-        item = m_channelList->currentItem();
-        updateChannelItem(real, item);
+            item = m_channelList->currentItem();
+            updateChannelItem(real, item);
+            m_channelList->resizeColumnToContents(CH_COL_NAME);
 
-        setModified();
+            setModified();
+        }
     }
 }
 
@@ -517,9 +547,20 @@ void QLCFixtureEditor::slotPasteChannel()
         copy = new QLCChannel(ch);
         item = new QTreeWidgetItem(m_channelList);
 
+        int cpIdx = 1;
+        QString copyName;
+        do
+        {
+            copyName = QString("%1 %2").arg(ch->name()).arg(cpIdx);
+            cpIdx++;
+        } while (m_fixtureDef->channel(copyName) != NULL);
+
+        copy->setName(copyName);
+
         m_fixtureDef->addChannel(copy);
         updateChannelItem(copy, item);
         m_channelList->setCurrentItem(item);
+        m_channelList->resizeColumnToContents(CH_COL_NAME);
 
         setModified();
     }
@@ -740,7 +781,7 @@ void QLCFixtureEditor::slotRemoveMode()
     QLCFixtureMode* mode = currentMode();
 
     if (QMessageBox::question(this, tr("Remove Mode"),
-                              tr("Are you sure you wish to remove mode: %1").arg(mode->name()),
+                              tr("Are you sure you wish to remove mode: %1 ?").arg(mode->name()),
                               QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
     {
         m_fixtureDef->removeMode(mode);

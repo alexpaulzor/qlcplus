@@ -21,6 +21,7 @@
 #ifndef AUDIOCAPTURE_H
 #define AUDIOCAPTURE_H
 
+#include <stdint.h>
 #include <QThread>
 #include <QMutex>
 
@@ -29,6 +30,10 @@
 #define FREQ_SUBBANDS_MAX_NUMBER        32
 #define FREQ_SUBBANDS_DEFAULT_NUMBER    16
 #define SPECTRUM_MAX_FREQUENCY          5000
+
+/** @addtogroup engine_audio Audio
+ * @{
+ */
 
 class AudioCapture : public QThread
 {
@@ -63,6 +68,10 @@ public:
      * Returns input interface latency in milliseconds.
      */
     virtual qint64 latency() = 0;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    virtual void setVolume(qreal volume) = 0;
+#endif
 
     /*!
      * Stops processing audio data, preserving buffered audio data.
@@ -115,5 +124,7 @@ protected:
     void *m_fftOutputBuffer;
     double m_fftMagnitudeBuffer[FREQ_SUBBANDS_MAX_NUMBER];
 };
+
+/** @} */
 
 #endif // AUDIOCAPTURE_H

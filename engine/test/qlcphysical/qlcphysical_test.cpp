@@ -84,15 +84,15 @@ void QLCPhysical_Test::lensName()
 void QLCPhysical_Test::lensDegreesMin()
 {
     QVERIFY(p.lensDegreesMin() == 0);
-    p.setLensDegreesMin(9);
-    QVERIFY(p.lensDegreesMin() == 9);
+    p.setLensDegreesMin(9.4);
+    QVERIFY(p.lensDegreesMin() == 9.4);
 }
 
 void QLCPhysical_Test::lensDegreesMax()
 {
     QVERIFY(p.lensDegreesMax() == 0);
-    p.setLensDegreesMax(40);
-    QVERIFY(p.lensDegreesMax() == 40);
+    p.setLensDegreesMax(40.5);
+    QVERIFY(p.lensDegreesMax() == 40.5);
 }
 
 void QLCPhysical_Test::focusType()
@@ -164,7 +164,7 @@ void QLCPhysical_Test::load()
 
     /* Dimensions */
     QDomElement dim = doc.createElement("Dimensions");
-    dim.setAttribute("Weight", 39.4);
+    dim.setAttribute("Weight", QString::number(39.4));
     dim.setAttribute("Width", 530);
     dim.setAttribute("Height", 320);
     dim.setAttribute("Depth", 260);

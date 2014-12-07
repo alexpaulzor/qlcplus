@@ -29,6 +29,10 @@ class QDomDocument;
 class QDomElement;
 class Doc;
 
+/** @addtogroup engine Engine
+ * @{
+ */
+
 #define KXMLQLCChannelsGroup "ChannelsGroup"
 
 class ChannelsGroup : public QObject
@@ -123,14 +127,14 @@ public:
      *
      * @param source The input source to set
      */
-    void setInputSource(const QLCInputSource& source);
+    void setInputSource(QLCInputSource *source);
 
     /**
      * Get an assigned external input source
      *
      * @param id The id of the source to get
      */
-    QLCInputSource inputSource() const;
+    QLCInputSource *inputSource() const;
 
 protected slots:
     /**
@@ -151,7 +155,9 @@ private:
     uchar m_masterValue;
     QList <SceneValue> m_channels;
 
-    QLCInputSource m_input;
+    QLCInputSource *m_input;
 };
+
+/** @} */
 
 #endif

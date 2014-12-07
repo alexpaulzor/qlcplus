@@ -30,8 +30,10 @@ OSCPlugin::~OSCPlugin()
 void OSCPlugin::init()
 {
     QSettings settings;
-    QStringList defaults;
-    defaults << "7770" << "8000" << "9000" << "9990";
+    QStringList defaultInputPorts;
+    defaultInputPorts << "7770" << "8000" << "9000" << "9990";
+    QStringList defaultOutputPorts;
+    defaultOutputPorts << "7771" << "8001" << "9001" << "9991";
 
     for (int i = 0; i < QLCIOPLUGINS_UNIVERSES; i++)
     {
@@ -40,7 +42,7 @@ void OSCPlugin::init()
         if (value.isValid() == true)
             m_nodes[i].m_port = value.toString();
         else
-            m_nodes[i].m_port = defaults.at(i);
+            m_nodes[i].m_port = defaultInputPorts.at(i);
 
         QString outAddrkey = QString("OSCplugin/Output%1/output_addr").arg(i);
         QVariant outValue = settings.value(outAddrkey);
@@ -53,12 +55,15 @@ void OSCPlugin::init()
                 m_nodes[i].m_outAddr = lo_address_new(strList.at(0).toStdString().c_str(), strList.at(1).toStdString().c_str());
             }
             else
-                m_nodes[i].m_outAddr = lo_address_new(strAddr.toStdString().c_str(), defaults.at(i).toStdString().c_str());
+                m_nodes[i].m_outAddr = lo_address_new(strAddr.toStdString().c_str(), defaultInputPorts.at(i).toStdString().c_str());
 
             m_nodes[i].m_outAddrStr = strAddr;
         }
         else
+        {
+            m_nodes[i].m_outAddr = lo_address_new(NULL, defaultOutputPorts.at(i).toStdString().data());
             m_nodes[i].m_outAddrStr = QString();
+        }
 
         // Initialize DMX values to 0
         for (int d = 0; d < 512; d++)
@@ -154,12 +159,13 @@ int messageCallback(const char *path, const char *types, lo_arg **argv,
 /*********************************************************************
  * Outputs
  *********************************************************************/
-void OSCPlugin::openOutput(quint32 output)
+bool OSCPlugin::openOutput(quint32 output)
 {
     if (output >= QLCIOPLUGINS_UNIVERSES)
-        return;
+        return false;
 
     qDebug() << Q_FUNC_INFO << "Output on " << m_nodes[output].m_outAddrStr;
+    return true;
 }
 
 void OSCPlugin::closeOutput(quint32 output)
@@ -208,20 +214,22 @@ QString OSCPlugin::outputInfo(quint32 output)
     return str;
 }
 
-void OSCPlugin::writeUniverse(quint32 output, const QByteArray &universe)
+void OSCPlugin::writeUniverse(quint32 universe, quint32 output, const QByteArray &data)
 {
+    Q_UNUSED(universe)
+
     if (output >= QLCIOPLUGINS_UNIVERSES)
         return;
 
-    for (int i = 0; i < universe.length(); i++)
+    for (int i = 0; i < data.length(); i++)
     {
-        if (universe[i] != m_nodes[output].m_dmxValues[i])
+        if (data[i] != m_nodes[output].m_dmxValues[i])
         {
             //send data here
-            m_nodes[output].m_dmxValues[i] = universe[i];
+            m_nodes[output].m_dmxValues[i] = data[i];
             QString str = QString("/%1/dmx/%2").arg(output).arg(i);
-            //qDebug() << "[OSC writeUniverse] Send channel : " << str << ", value: " << universe[i];
-            lo_send(m_nodes[output].m_outAddr, str.toStdString().c_str(), "f", (float)((uchar)universe[i]) / 255);
+            qDebug() << "[OSC writeUniverse] Send channel : " << str << ", value: " << QString::number(data[i]);
+            lo_send(m_nodes[output].m_outAddr, str.toStdString().c_str(), "f", (float)((uchar)data[i]) / 255);
         }
     }
 }
@@ -230,10 +238,10 @@ void OSCPlugin::writeUniverse(quint32 output, const QByteArray &universe)
  * Inputs
  *************************************************************************/
 
-void OSCPlugin::openInput(quint32 input)
+bool OSCPlugin::openInput(quint32 input)
 {
     if (input >= QLCIOPLUGINS_UNIVERSES)
-        return;
+        return false;
 
     qDebug() << Q_FUNC_INFO << "Input " << input << " port: " << m_nodes[input].m_port;
 
@@ -257,6 +265,7 @@ void OSCPlugin::openInput(quint32 input)
 
         lo_server_thread_start(m_nodes[input].m_serv_thread);
 	}
+    return true;
 }
 
 void OSCPlugin::closeInput(quint32 input)
@@ -357,7 +366,7 @@ quint16 OSCPlugin::getHash(quint32 line, QString path)
 
 void OSCPlugin::sendValueChanged(quint32 input, QString path, uchar value)
 {
-    emit valueChanged(input, getHash(input, path), value, path);
+    emit valueChanged(UINT_MAX, input, getHash(input, path), value, path);
 }
 
 /*********************************************************************

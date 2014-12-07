@@ -158,11 +158,17 @@ QString UDMXDevice::infoText() const
  * Open & close
  ****************************************************************************/
 
-void UDMXDevice::open()
+bool UDMXDevice::open()
 {
     if (m_device != NULL && m_handle == NULL)
         m_handle = usb_open(m_device);
+
+    if (m_handle == NULL)
+        return false;
+
     start();
+
+    return true;
 }
 
 void UDMXDevice::close()
@@ -195,10 +201,12 @@ void UDMXDevice::outputDMX(const QByteArray& universe)
 
 void UDMXDevice::stop()
 {
-    if (isRunning() == true)
+    while (isRunning() == true)
     {
+	// This may occur before the thread sets m_running,
+	// so timeout and try again if necessary
         m_running = false;
-        wait();
+        wait(100);
     }
 }
 

@@ -26,6 +26,7 @@
 #include <QLineEdit>
 #include <QSettings>
 #include <QDebug>
+#include <QUrl>
 
 #include "qlcfixturedef.h"
 #include "qlcmacros.h"
@@ -35,8 +36,6 @@
 #include "chasereditor.h"
 #include "mastertimer.h"
 #include "chaserstep.h"
-#include "outputmap.h"
-#include "inputmap.h"
 #include "apputil.h"
 #include "fixture.h"
 #include "chaser.h"
@@ -58,6 +57,7 @@ ChaserEditor::ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveM
     : QWidget(parent)
     , m_doc(doc)
     , m_chaser(chaser)
+    , m_speedDials(NULL)
     , m_liveMode(liveMode)
 {
     Q_ASSERT(chaser != NULL);
@@ -68,12 +68,7 @@ ChaserEditor::ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveM
     /* Disable editing of steps number */
     m_tree->setItemDelegateForColumn(COL_NUM, new NoEditDelegate(this));
     if (m_chaser->isSequence() == true)
-    {
         m_tree->header()->setSectionHidden(COL_NAME, true);
-        groupBox->hide();
-        m_pingPong->hide();
-        groupBox_2->hide();
-    }
 
     m_cutAction = new QAction(QIcon(":/editcut.png"), tr("Cut"), this);
     m_cutButton->setDefaultAction(m_cutAction);
@@ -150,6 +145,9 @@ ChaserEditor::ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveM
     case Chaser::SingleShot:
         m_singleShot->setChecked(true);
         break;
+    case Chaser::Random:
+        m_random->setChecked(true);
+        break;
     }
 
     /* Running direction */
@@ -201,6 +199,10 @@ ChaserEditor::ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveM
             this, SLOT(slotSingleShotClicked()));
     connect(m_pingPong, SIGNAL(clicked()),
             this, SLOT(slotPingPongClicked()));
+    connect(m_random, SIGNAL(clicked()),
+            this, SLOT(slotRandomClicked()));
+    connect(m_random, SIGNAL(clicked()),
+            this, SLOT(slotRestartTest()));
 
     connect(m_forward, SIGNAL(clicked()),
             this, SLOT(slotForwardClicked()));
@@ -240,14 +242,49 @@ ChaserEditor::ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveM
 ChaserEditor::~ChaserEditor()
 {
     if (m_speedDials != NULL)
-        delete m_speedDials;
+        m_speedDials->deleteLater();
     m_speedDials = NULL;
 
     // double check that the Chaser still exists !
     if (m_liveMode == false &&
         m_doc->functions().contains(m_chaser) == true &&
         m_chaser->stopped() == false)
-            m_chaser->stopAndWait();
+        m_chaser->stopAndWait();
+}
+
+void ChaserEditor::showOrderAndDirection(bool show)
+{
+    groupBox->setVisible(show);
+    groupBox_2->setVisible(show);
+}
+
+void ChaserEditor::stopTest()
+{
+    if (m_chaser->stopped() == false)
+        m_chaser->stopAndWait();
+}
+
+void ChaserEditor::selectStepAtTime(quint32 time)
+{
+    quint32 stepTime = m_chaser->getStartTime();
+    for (int i = 0; i < m_chaser->stepsCount(); i++)
+    {
+        quint32 timeIncr = 0;
+        if (m_chaser->durationMode() == Chaser::Common)
+            timeIncr = m_chaser->duration();
+        else // Chaser::PerStep
+        {
+            timeIncr += m_chaser->stepAt(i).duration;
+        }
+        if (time < stepTime + timeIncr)
+        {
+            QTreeWidgetItem *item = m_tree->topLevelItem(i);
+            m_tree->setCurrentItem(item);
+            m_tree->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+            return;
+        }
+        stepTime += timeIncr;
+    }
 }
 
 void ChaserEditor::slotFunctionManagerActive(bool active)
@@ -259,7 +296,7 @@ void ChaserEditor::slotFunctionManagerActive(bool active)
     else
     {
         if (m_speedDials != NULL)
-            delete m_speedDials;
+            m_speedDials->deleteLater();
         m_speedDials = NULL;
     }
 }
@@ -444,7 +481,7 @@ void ChaserEditor::slotSpeedDialToggle(bool state)
     else
     {
         if (m_speedDials != NULL)
-            delete m_speedDials;
+            m_speedDials->deleteLater();
         m_speedDials = NULL;
     }
 }
@@ -483,29 +520,114 @@ void ChaserEditor::slotItemChanged(QTreeWidgetItem *item, int column)
     ChaserStep step = m_chaser->steps().at(idx);
     if (column == COL_FADEIN)
     {
-        step.fadeIn = newValue;
-        step.duration = step.fadeIn + step.hold;
+        if (m_chaser->fadeInMode() == Chaser::Common)
+        {
+            if((qint32)newValue < 0)
+                newValue = (quint32) Function::infiniteSpeed();
+            m_chaser->setFadeInSpeed(newValue);
+            updateTree();
+        }
+        else
+        {
+            step.fadeIn = newValue;
+            if((qint32)newValue < 0)
+            {
+                step.duration = Function::infiniteSpeed();
+            }
+            else
+            {
+                step.duration = step.fadeIn + step.hold;
+            }
+        }
     }
     else if (column == COL_HOLD)
     {
-        step.hold = newValue;
+        uint fadeIn = step.fadeIn;
         if (m_chaser->fadeInMode() == Chaser::Common)
-            step.duration = m_chaser->fadeInSpeed() + step.hold;
+            fadeIn = m_chaser->fadeInSpeed();
+
+        if (m_chaser->durationMode() == Chaser::Common)
+        {
+            if((qint32)newValue < 0)
+            {
+                m_chaser->setDuration(Function::infiniteSpeed());
+            }
+            else
+            {
+                m_chaser->setDuration(fadeIn + newValue);
+            }
+            updateTree();
+        }
         else
-            step.duration = step.fadeIn + step.hold;
+        {
+            if((qint32)newValue < 0)
+            {
+                step.duration = Function::infiniteSpeed();
+                step.hold = Function::infiniteSpeed();
+            }
+            else
+            {
+                step.hold = newValue;
+                step.duration = fadeIn + step.hold;
+                
+            }
+        }
     }
     else if (column == COL_FADEOUT)
     {
-        step.fadeOut = newValue;
-        step.duration = step.fadeIn + step.hold;
+        if (m_chaser->fadeOutMode() == Chaser::Common)
+        {
+            if((qint32)newValue < 0)
+                newValue = (quint32) Function::infiniteSpeed();
+            m_chaser->setFadeOutSpeed(newValue);
+            updateTree();
+        }
+        else
+        {
+            step.fadeOut = newValue;
+            if ((qint32)step.fadeIn < 0)
+            {
+                step.duration = Function::infiniteSpeed();
+            }
+            else if ((qint32)step.hold < 0)
+            {
+                step.duration = Function::infiniteSpeed();
+            }
+            else
+            {
+                step.duration = step.fadeIn + step.hold;
+            }
+        }
     }
     else if (column == COL_DURATION)
     {
-        qint32 newDuration = (qint32)newValue - (qint32)step.fadeIn;
-        if (newDuration >= 0)
+//        uint fadeIn = step.fadeIn;
+//        if (m_chaser->fadeInMode() == Chaser::Common)
+//            fadeIn = m_chaser->fadeInSpeed();
+//
+        if (m_chaser->durationMode() == Chaser::Common)
         {
-            step.duration = newValue;
-            step.hold = step.duration - step.fadeIn;
+            quint32 newDuration;
+            if ((qint32)newValue < 0)
+                newDuration = (quint32) Function::infiniteSpeed();
+            else
+                newDuration = (qint32)newValue;
+            m_chaser->setDuration(newDuration);
+            updateTree();
+        }
+        else
+        {
+            qint32 newDuration = (qint32)newValue;
+            if (newDuration >= 0)
+            {
+                step.duration = newValue;
+                step.hold = step.duration - step.fadeIn;
+            }
+            else
+            {
+                step.duration = Function::infiniteSpeed();
+                step.hold = Function::infiniteSpeed();
+            }
         }
     }
     else if (column == COL_NOTES)
@@ -641,6 +763,11 @@ void ChaserEditor::slotPingPongClicked()
     m_chaser->setRunOrder(Function::PingPong);
 }
 
+void ChaserEditor::slotRandomClicked()
+{
+    m_chaser->setRunOrder(Function::Random);
+}
+
 void ChaserEditor::slotForwardClicked()
 {
     m_chaser->setDirection(Function::Forward);
@@ -706,7 +833,18 @@ void ChaserEditor::slotFadeInDialChanged(int ms)
             int index = m_tree->indexOfTopLevelItem(item);
             ChaserStep step = stepAtItem(item);
             step.fadeIn = ms;
-            step.duration = step.fadeIn + step.hold;
+            if ((qint32)step.fadeIn < 0)
+            {
+                step.duration = step.fadeIn;
+            }
+            else if ((qint32)step.hold < 0)
+            {
+                step.duration = step.hold;
+            }
+            else
+            {
+                step.duration = step.fadeIn + step.hold;
+            }
             m_chaser->replaceStep(step, index);
             updateItem(item, step);
         }
@@ -733,7 +871,18 @@ void ChaserEditor::slotFadeOutDialChanged(int ms)
             int index = m_tree->indexOfTopLevelItem(item);
             ChaserStep step = stepAtItem(item);
             step.fadeOut = ms;
-            step.duration = step.fadeIn + step.hold;
+            if ((qint32)step.fadeIn < 0)
+            {
+                step.duration = step.fadeIn;
+            }
+            else if ((qint32)step.hold < 0)
+            {
+                step.duration = step.hold;
+            }
+            else
+            {
+                step.duration = step.fadeIn + step.hold;
+            }
             m_chaser->replaceStep(step, index);
             updateItem(item, step);
         }
@@ -766,7 +915,11 @@ void ChaserEditor::slotHoldDialChanged(int ms)
         break;
     case Chaser::Common:
     {
-        uint duration = m_chaser->fadeInSpeed() + ms;
+        uint duration;
+        if (ms < 0)
+            duration = ms;
+        else
+            duration = m_chaser->fadeInSpeed() + ms;
         m_chaser->setDuration(duration);
         updateTree();
         break;
@@ -777,6 +930,11 @@ void ChaserEditor::slotHoldDialChanged(int ms)
     }
 
     m_tree->resizeColumnToContents(COL_HOLD);
+}
+
+void ChaserEditor::slotDialDestroyed(QObject *)
+{
+    m_speeddial->setChecked(false);
 }
 
 void ChaserEditor::createSpeedDials()
@@ -792,6 +950,8 @@ void ChaserEditor::createSpeedDials()
                 this, SLOT(slotFadeOutDialChanged(int)));
         connect(m_speedDials, SIGNAL(holdChanged(int)),
                 this, SLOT(slotHoldDialChanged(int)));
+        connect(m_speedDials, SIGNAL(destroyed(QObject*)),
+                this, SLOT(slotDialDestroyed(QObject*)));
     }
 
     m_speedDials->show();
@@ -922,14 +1082,9 @@ void ChaserEditor::updateSpeedDials()
  ****************************************************************************/
 int ChaserEditor::getCurrentIndex()
 {
-    QList <QTreeWidgetItem*> selected(m_tree->selectedItems());
-    int index = 0;
-    if (selected.size() > 0)
-    {
-        QTreeWidgetItem* item(selected.first());
-        index = m_tree->indexOfTopLevelItem(item);
-    }
-    return index;
+    // Return the index of the current selected item
+    // Return -1 if nothing is selected
+    return m_tree->indexOfTopLevelItem(m_tree->currentItem());
 }
 
 void ChaserEditor::slotRestartTest()
@@ -993,9 +1148,9 @@ void ChaserEditor::slotModeChanged(Doc::Mode mode)
 
 void ChaserEditor::slotStepChanged(int stepNumber)
 {
-    if (m_tree->selectedItems().count() > 0)
-        m_tree->selectedItems().first()->setSelected(false);
-    m_tree->topLevelItem(stepNumber)->setSelected(true);
+    // Select only the item at step StepNumber
+    // If stepNumber is outside of bounds, select nothing
+    m_tree->setCurrentItem(m_tree->topLevelItem(stepNumber));
 }
 
 bool ChaserEditor::interruptRunning()
@@ -1078,7 +1233,7 @@ void ChaserEditor::updateItem(QTreeWidgetItem* item, ChaserStep& step)
         break;
     case Chaser::PerStep:
         item->setText(COL_FADEIN, Function::speedToString(step.fadeIn));
-        item->setText(COL_DURATION, Function::speedToString(step.duration));
+        //item->setText(COL_DURATION, Function::speedToString(step.duration));
         break;
     default:
     case Chaser::Default:
@@ -1093,7 +1248,7 @@ void ChaserEditor::updateItem(QTreeWidgetItem* item, ChaserStep& step)
         break;
     case Chaser::PerStep:
         item->setText(COL_FADEOUT, Function::speedToString(step.fadeOut));
-        item->setText(COL_DURATION, Function::speedToString(step.duration));
+        //item->setText(COL_DURATION, Function::speedToString(step.duration));
         break;
     default:
     case Chaser::Default:
@@ -1105,11 +1260,34 @@ void ChaserEditor::updateItem(QTreeWidgetItem* item, ChaserStep& step)
     default:
     case Chaser::Common:
         step.duration = m_chaser->duration();
-        step.hold = step.duration - m_chaser->fadeInSpeed();
         if (step.duration == Function::infiniteSpeed())
             item->setText(COL_HOLD, Function::speedToString(step.duration));
         else
+        {
+            if (m_chaser->fadeInMode() == Chaser::PerStep)
+            {
+                if ((qint32)step.duration < 0)
+                {
+                    step.hold = step.duration;
+                }
+                else
+                {
+                    step.hold = step.duration - step.fadeIn;
+                }
+            }
+            else
+            {
+                if ((qint32)step.duration < 0)
+                {
+                    step.hold = step.duration;
+                }
+                else
+                {
+                    step.hold = step.duration - m_chaser->fadeInSpeed();
+                }
+            }
             item->setText(COL_HOLD, Function::speedToString(step.hold));
+        }
         item->setText(COL_DURATION, Function::speedToString(m_chaser->duration()));
         break;
     case Chaser::PerStep:

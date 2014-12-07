@@ -28,6 +28,7 @@
 
 class QLCFixtureDefCache;
 class FixtureGroupEditor;
+class FixtureTreeWidget;
 class QTreeWidgetItem;
 class QTextBrowser;
 class QTreeWidget;
@@ -36,6 +37,10 @@ class OutputMap;
 class QSplitter;
 class QAction;
 class QMenu;
+
+/** @addtogroup ui_fixtures
+ * @{
+ */
 
 #define KXMLQLCFixtureManager "FixtureManager"
 #define KXMLQLCFixtureManagerSplitterSize "SplitterSize"
@@ -107,20 +112,8 @@ private:
     /** Remove a previously created channels group */
     void removeChannelsGroup();
 
-    /** Get a QTreeWidgetItem whose fixture ID is $id */
-    QTreeWidgetItem* fixtureItem(quint32 id) const;
-
-    /** Get a QTreeWidgetItem whose group ID is $id */
-    QTreeWidgetItem* groupItem(quint32 id) const;
-
     /** Construct the list view and data view */
     void initDataView();
-
-    /** Update a single fixture's data into a QTreeWidgetItem */
-    void updateFixtureItem(QTreeWidgetItem* item, Fixture *fxi);
-
-    /** Update a group's data to and under $item */
-    void updateGroupItem(QTreeWidgetItem* item, const FixtureGroup* grp);
 
     /** Handle single fixture selection */
     void fixtureSelected(quint32 id);
@@ -162,7 +155,7 @@ private:
 
 private:
     QSplitter* m_splitter;
-    QTreeWidget* m_fixtures_tree;
+    FixtureTreeWidget* m_fixtures_tree;
     QTreeWidget* m_channel_groups_tree;
 
     QTextBrowser* m_info;
@@ -195,6 +188,7 @@ private:
 
 private slots:
     void slotAdd();
+    void slotAddRGBPanel();
     void slotRemove();
     void slotProperties();
     void slotFadeConfig();
@@ -211,6 +205,7 @@ private slots:
 
 private:
     QAction* m_addAction;
+    QAction* m_addRGBAction;
     QAction* m_removeAction;
     QAction* m_propertiesAction;
     QAction* m_fadeConfigAction;
@@ -226,5 +221,7 @@ private:
     QAction* m_exportAction;
     QMenu* m_groupMenu;
 };
+
+/** @} */
 
 #endif

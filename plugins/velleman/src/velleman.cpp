@@ -75,16 +75,17 @@ int Velleman::capabilities() const
  * Outputs
  *****************************************************************************/
 
-void Velleman::openOutput(quint32 output)
+bool Velleman::openOutput(quint32 output)
 {
     if (output != 0)
-        return;
+        return false;
 
     if (m_currentlyOpen == false)
     {
         StartDevice();
         m_currentlyOpen = true;
     }
+    return true;
 }
 
 void Velleman::closeOutput(quint32 output)
@@ -140,14 +141,16 @@ QString Velleman::outputInfo(quint32 output)
     return str;
 }
 
-void Velleman::writeUniverse(quint32 output, const QByteArray& universe)
+void Velleman::writeUniverse(quint32 universe, quint32 output, const QByteArray &data)
 {
+    Q_UNUSED(universe)
+
     if (output != 0 || m_currentlyOpen == false)
         return;
 
-    SetChannelCount((int32_t) universe.size());
-    for (int i = 0; i < universe.size(); i++)
-        m_values[i] = (qint32) universe[i];
+    SetChannelCount((int32_t) data.size());
+    for (int i = 0; i < data.size(); i++)
+        m_values[i] = (qint32) data[i];
 
     SetAllData((int32_t*) m_values);
 }

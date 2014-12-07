@@ -25,32 +25,37 @@
     </message>
 </context>
 <context>
-    <name>HID</name>
+    <name>HIDFX5Device</name>
     <message>
-        <location filename="hid.cpp" line="141"/>
-        <source>This plugin provides input support for HID-based joysticks.</source>
-        <translation>Tento plugin přidává podporu pro HID joystiky (pákové ovladače).</translation>
+        <location filename="hidfx5device.cpp" line="61"/>
+        <source>FX5 USB DMX Interface Error</source>
+        <translation>Chyba rozhraní FX5 USB DMX</translation>
     </message>
-</context>
-<context>
-    <name>HIDEventDevice</name>
     <message>
-        <location filename="hideventdevice.cpp" line="324"/>
-        <source>N/A</source>
-        <translation>N/A</translation>
+        <location filename="hidfx5device.cpp" line="62"/>
+        <source>Unable to open the FX5 Interface. Make sure the udev rule is installed.</source>
+        <translation>Nelze otevřít FX5 rozhraní. Ujistěte se že máte nainstalovaný udev.</translation>
     </message>
 </context>
 <context>
     <name>HIDJsDevice</name>
     <message>
-        <location filename="hidjsdevice.cpp" line="186"/>
+        <location filename="hidjsdevice.cpp" line="313"/>
         <source>Axes: %1</source>
         <translation>Osy: %1</translation>
     </message>
     <message>
-        <location filename="hidjsdevice.cpp" line="188"/>
+        <location filename="hidjsdevice.cpp" line="315"/>
         <source>Buttons: %1</source>
         <translation>Tlačítka: %1</translation>
+    </message>
+</context>
+<context>
+    <name>HIDPlugin</name>
+    <message>
+        <location filename="hidplugin.cpp" line="115"/>
+        <source>This plugin provides support for HID-based joysticks and the FX5 USB DMX adapter.</source>
+        <translation>Tento plugin přidává podporu pro HID joysticky a FX5 USB DMX adaptéry.</translation>
     </message>
 </context>
 </TS>

@@ -25,6 +25,10 @@
 #include <QFile>
 
 
+/** @addtogroup engine Engine
+ * @{
+ */
+
 // Fixture document type
 #define KXMLQLCFixtureDefDocument "FixtureDefinition"
 
@@ -84,6 +88,10 @@ public:
      * Fixture information
      *********************************************************************/
 public:
+
+    /** Get the temporary definition file absolute path */
+    QString definitionSourceFile() const;
+
     /** Set the temporary definition file absolute path */
     void setDefinitionSourceFile(const QString& absPath);
 
@@ -189,5 +197,7 @@ protected:
     /** Load <Creator> information */
     bool loadCreator(const QDomElement& creator);
 };
+
+/** @} */
 
 #endif

@@ -26,12 +26,15 @@
 #include <QTime>
 
 class MasterTimerPrivate;
-class UniverseArray;
 class GenericFader;
-class OutputMap;
 class DMXSource;
 class Function;
+class Universe;
 class Doc;
+
+/** @addtogroup engine Engine
+ * @{
+ */
 
 class MasterTimer : public QObject
 {
@@ -98,9 +101,12 @@ signals:
     /** Tells that the list of running functions has changed */
     void functionListChanged();
 
+    /** Emitted when a Function is started */
+    void functionStarted(quint32 id);
+
 private:
     /** Execute one timer tick for each registered Function */
-    void timerTickFunctions(UniverseArray* universes);
+    void timerTickFunctions(QList<Universe *> universes);
 
 private:
     /** List of currently running functions */
@@ -124,7 +130,7 @@ public:
      *
      * @param source The DMXSource to register
      */
-    virtual void registerDMXSource(DMXSource* source);
+    virtual void registerDMXSource(DMXSource* source, QString name);
 
     /**
      * Unregister a previously registered DMXSource. This should be called
@@ -136,7 +142,7 @@ public:
 
 private:
     /** Execute one timer tick for each registered DMXSource */
-    void timerTickDMXSources(UniverseArray* universes);
+    void timerTickDMXSources(QList<Universe *> universes);
 
 private:
     /** List of currently registered DMX sources */
@@ -148,6 +154,7 @@ private:
      * always lock m_functionListMutex first!
      */
     QMutex m_dmxSourceListMutex;
+    bool m_simpleDeskRegistered;
 
     /*************************************************************************
      * Generic Fader
@@ -162,7 +169,7 @@ public:
 
 private:
     /** Execute one timer tick for the GenericFader */
-    void timerTickFader(UniverseArray* universes);
+    void timerTickFader(QList<Universe *> universes);
 
 private:
     GenericFader* m_fader;
@@ -170,5 +177,7 @@ private:
 private:
     MasterTimerPrivate* d_ptr;
 };
+
+/** @} */
 
 #endif

@@ -31,13 +31,14 @@
 #include "qlcmacros.h"
 #include "qlcfile.h"
 
-#include "universearray.h"
 #include "mastertimer.h"
 #include "fixture.h"
 #include "scene.h"
 #include "doc.h"
 #include "efx.h"
 #include "bus.h"
+
+#include "efxuistate.h"
 
 /*****************************************************************************
  * Initialization
@@ -148,6 +149,29 @@ bool EFX::copyFrom(const Function* function)
     return Function::copyFrom(function);
 }
 
+void EFX::setDuration(uint ms)
+{
+    Function::setDuration(ms);
+    for(int i = 0; i < m_fixtures.size(); ++i)
+    {
+        m_fixtures[i]->durationChanged();
+    }
+}
+
+/*****************************************************************************
+ * UI State
+ *****************************************************************************/
+
+FunctionUiState * EFX::createUiState()
+{
+    return new EfxUiState(this);
+}
+
+quint32 EFX::totalDuration()
+{
+    return duration();
+}
+
 /*****************************************************************************
  * Algorithm
  *****************************************************************************/
@@ -175,6 +199,9 @@ QStringList EFX::algorithmList()
     list << algorithmToString(EFX::Line);
     list << algorithmToString(EFX::Line2);
     list << algorithmToString(EFX::Diamond);
+    list << algorithmToString(EFX::Square);
+    list << algorithmToString(EFX::SquareChoppy);
+    list << algorithmToString(EFX::Leaf);
     list << algorithmToString(EFX::Lissajous);
     return list;
 }
@@ -194,6 +221,12 @@ QString EFX::algorithmToString(EFX::Algorithm algo)
             return QString(KXMLQLCEFXLine2AlgorithmName);
         case EFX::Diamond:
             return QString(KXMLQLCEFXDiamondAlgorithmName);
+        case EFX::Square:
+            return QString(KXMLQLCEFXSquareAlgorithmName);
+        case EFX::SquareChoppy:
+            return QString(KXMLQLCEFXSquareChoppyAlgorithmName);
+        case EFX::Leaf:
+            return QString(KXMLQLCEFXLeafAlgorithmName);
         case EFX::Lissajous:
             return QString(KXMLQLCEFXLissajousAlgorithmName);
     }
@@ -209,6 +242,12 @@ EFX::Algorithm EFX::stringToAlgorithm(const QString& str)
         return EFX::Line2;
     else if (str == QString(KXMLQLCEFXDiamondAlgorithmName))
         return EFX::Diamond;
+    else if (str == QString(KXMLQLCEFXSquareAlgorithmName))
+        return EFX::Square;
+    else if (str == QString(KXMLQLCEFXSquareChoppyAlgorithmName))
+        return EFX::SquareChoppy;
+    else if (str == QString(KXMLQLCEFXLeafAlgorithmName))
+        return EFX::Leaf;
     else if (str == QString(KXMLQLCEFXLissajousAlgorithmName))
         return EFX::Lissajous;
     else
@@ -285,6 +324,9 @@ qreal EFX::calculateDirection(Function::Direction direction, qreal iterator) con
     case Eight:
     case Line2:
     case Diamond:
+    case Square:
+    case SquareChoppy:
+    case Leaf:
     case Lissajous:
         return (M_PI * 2.0) - iterator;
     case Line:
@@ -323,9 +365,66 @@ void EFX::calculatePoint(qreal iterator, qreal* x, qreal* y) const
         *y = pow(cos(iterator), 3);
         break;
 
+    case Square:
+        if (iterator < M_PI / 2)
+        {
+            *x = (iterator * 2 / M_PI) * 2 - 1;
+            *y = 1;
+        }
+        else if (M_PI / 2 <= iterator && iterator < M_PI)
+        {
+            *x = 1;
+            *y = (1 - (iterator - M_PI / 2) * 2 / M_PI) * 2 - 1;
+        }
+        else if (M_PI <= iterator && iterator < M_PI * 3 / 2)
+        {
+            *x = (1 - (iterator - M_PI) * 2 / M_PI) * 2 - 1;
+            *y = -1;
+        }
+        else // M_PI * 3 / 2 <= iterator
+        {
+            *x = -1;
+            *y = ((iterator - M_PI * 3 / 2) * 2 / M_PI) * 2 - 1;
+        }
+        break;
+
+    case SquareChoppy:
+        *x = round(cos(iterator));
+        *y = round(sin(iterator));
+        break;
+
+    case Leaf:
+        *x = pow(cos(iterator + M_PI_2), 5);
+        *y = cos(iterator);
+        break;
+
     case Lissajous:
-        *x = cos((m_xFrequency * iterator) - m_xPhase);
-        *y = cos((m_yFrequency * iterator) - m_yPhase);
+        {
+            if (m_xFrequency > 0)
+                *x = cos((m_xFrequency * iterator) - m_xPhase);
+            else
+            {
+                qreal iterator0 = ((iterator + m_xPhase) / M_PI);
+                int fff = iterator0;
+                iterator0 -= (fff - fff % 2);
+                qreal forward = 1 - floor(iterator0); // 1 when forward
+                qreal backward = 1 - forward; // 1 when backward
+                iterator0 = iterator0 - floor(iterator0);
+                *x = (forward * iterator0 + backward * (1 - iterator0)) * 2 - 1;
+            }
+            if (m_yFrequency > 0)
+                *y = cos((m_yFrequency * iterator) - m_yPhase);
+            else
+            {
+                qreal iterator0 = ((iterator + m_yPhase) / M_PI);
+                int fff = iterator0;
+                iterator0 -= (fff - fff % 2);
+                qreal forward = 1 - floor(iterator0); // 1 when forward
+                qreal backward = 1 - forward; // 1 when backward
+                iterator0 = iterator0 - floor(iterator0);
+                *y = (forward * iterator0 + backward * (1 - iterator0)) * 2 - 1;
+            }
+        }
         break;
     }
 
@@ -452,7 +551,7 @@ int EFX::yOffset() const
 
 void EFX::setXFrequency(int freq)
 {
-    m_xFrequency = static_cast<qreal> (CLAMP(freq, 0, 5));
+    m_xFrequency = static_cast<qreal> (CLAMP(freq, 0, 32));
     emit changed(this->id());
 }
 
@@ -463,7 +562,7 @@ int EFX::xFrequency() const
 
 void EFX::setYFrequency(int freq)
 {
-    m_yFrequency = static_cast<qreal> (CLAMP(freq, 0, 5));
+    m_yFrequency = static_cast<qreal> (CLAMP(freq, 0, 32));
     emit changed(this->id());
 }
 
@@ -982,11 +1081,12 @@ void EFX::preRun(MasterTimer* timer)
 
     Q_ASSERT(m_fader == NULL);
     m_fader = new GenericFader(doc());
+    m_fader->adjustIntensity(getAttributeValue(Intensity));
 
     Function::preRun(timer);
 }
 
-void EFX::write(MasterTimer* timer, UniverseArray* universes)
+void EFX::write(MasterTimer* timer, QList<Universe*> universes)
 {
     int ready = 0;
 
@@ -1010,7 +1110,7 @@ void EFX::write(MasterTimer* timer, UniverseArray* universes)
     m_fader->write(universes);
 }
 
-void EFX::postRun(MasterTimer* timer, UniverseArray* universes)
+void EFX::postRun(MasterTimer* timer, QList<Universe *> universes)
 {
     /* Reset all fixtures */
     QListIterator <EFXFixture*> it(m_fixtures);

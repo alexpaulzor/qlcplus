@@ -27,6 +27,7 @@
 #include "qlccapability.h"
 #include "qlcchannel.h"
 #include "qlcfile.h"
+#include "fixture.h"
 
 QLCFixtureDef::QLCFixtureDef()
 {
@@ -84,6 +85,11 @@ QLCFixtureDef& QLCFixtureDef::operator=(const QLCFixtureDef& fixture)
     }
 
     return *this;
+}
+
+QString QLCFixtureDef::definitionSourceFile() const
+{
+    return m_defFileAbsolutePath;
 }
 
 void QLCFixtureDef::setDefinitionSourceFile(const QString &absPath)
@@ -151,6 +157,12 @@ void QLCFixtureDef::checkLoaded()
 
     if (m_isLoaded == false)
     {
+        if (manufacturer() == KXMLFixtureGeneric &&
+           (model() == KXMLFixtureGeneric || model() == KXMLFixtureRGBPanel))
+        {
+            m_isLoaded = true;
+            return;
+        }
         if (m_defFileAbsolutePath.isEmpty())
         {
             qWarning() << Q_FUNC_INFO << "Empty file path provided ! This is a trouble.";
@@ -361,7 +373,7 @@ QFile::FileError QLCFixtureDef::loadXML(const QString& fileName)
 
     if (doc.doctype().name() == KXMLQLCFixtureDefDocument)
     {
-        qDebug() << Q_FUNC_INFO << "Loading " << fileName;
+        // qDebug() << Q_FUNC_INFO << "Loading " << fileName;
         if (loadXML(doc) == true)
             error = QFile::NoError;
         else

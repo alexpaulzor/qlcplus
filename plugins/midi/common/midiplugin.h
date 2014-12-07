@@ -65,6 +65,10 @@ public:
     /** @reimp */
     QString pluginInfo();
 
+    /** @reimp */
+    void setParameter(QString name, QVariant &value)
+    { Q_UNUSED(name); Q_UNUSED(value); }
+
 private:
     MidiEnumerator* m_enumerator;
 
@@ -73,7 +77,7 @@ private:
      *************************************************************************/
 public:
     /** @reimp */
-    void openOutput(quint32 output);
+    bool openOutput(quint32 output);
 
     /** @reimp */
     void closeOutput(quint32 output);
@@ -85,7 +89,7 @@ public:
     QString outputInfo(quint32 output);
 
     /** @reimp */
-    void writeUniverse(quint32 output, const QByteArray& universe);
+    void writeUniverse(quint32 universe, quint32 output, const QByteArray& data);
 
 private:
     /** Get an output device by its output index */
@@ -96,7 +100,7 @@ private:
      *************************************************************************/
 public:
     /** @reimp */
-    void openInput(quint32 input);
+    bool openInput(quint32 input);
 
     /** @reimp */
     void closeInput(quint32 input);

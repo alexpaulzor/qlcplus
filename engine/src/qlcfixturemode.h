@@ -28,11 +28,6 @@
 #include "qlcphysical.h"
 #include "qlcchannel.h"
 
-#define KXMLQLCFixtureMode              "Mode"
-#define KXMLQLCFixtureModeName          "Name"
-#define KXMLQLCFixtureModeChannel       "Channel"
-#define KXMLQLCFixtureModeChannelNumber "Number"
-
 class QDomDocument;
 class QDomElement;
 class QLCFixtureHead;
@@ -40,6 +35,15 @@ class QLCFixtureMode;
 class QLCFixtureDef;
 class QLCPhysical;
 class QLCChannel;
+
+/** @addtogroup engine Engine
+ * @{
+ */
+
+#define KXMLQLCFixtureMode              "Mode"
+#define KXMLQLCFixtureModeName          "Name"
+#define KXMLQLCFixtureModeChannel       "Channel"
+#define KXMLQLCFixtureModeChannelNumber "Number"
 
 /**
  * QLCFixtureMode is essentially a collection of QLCChannels, arranged in such
@@ -169,7 +173,7 @@ public:
      *
      * @return A list of channels in the mode.
      */
-    QList <QLCChannel*> channels() const;
+    QVector <QLCChannel*> channels() const;
 
     /**
      * Get a channel's index (i.e. the DMX channel number) within a mode.
@@ -182,7 +186,7 @@ public:
 
 protected:
     /** List of channels (pointers are not owned) */
-    QList <QLCChannel*> m_channels;
+    QVector <QLCChannel*> m_channels;
 
     /*********************************************************************
      * Heads
@@ -214,7 +218,7 @@ public:
     /**
      * Get a list of available fixture heads within the fixture mode
      */
-    QList <QLCFixtureHead> heads() const;
+    QVector <QLCFixtureHead> const& heads() const;
 
     /**
      * Find a head number for the given channel number
@@ -230,7 +234,7 @@ public:
     void cacheHeads();
 
 private:
-    QList <QLCFixtureHead> m_heads;
+    QVector <QLCFixtureHead> m_heads;
 
     /*********************************************************************
      * Physical
@@ -264,5 +268,7 @@ public:
     /** Save a mode to an XML document */
     bool saveXML(QDomDocument* doc, QDomElement* root);
 };
+
+/** @} */
 
 #endif

@@ -87,7 +87,7 @@ void RGBImage::reloadImage()
 
     if (!m_image.load(m_filename))
     {
-        qDebug() << "Load failed!";
+        qDebug() << "[RGBImage] Failed to load" << m_filename;
         return;
     }
 }
@@ -250,6 +250,11 @@ int RGBImage::apiVersion() const
 RGBAlgorithm::Type RGBImage::type() const
 {
     return RGBAlgorithm::Image;
+}
+
+int RGBImage::acceptColors() const
+{
+    return 0;
 }
 
 bool RGBImage::loadXML(const QDomElement& root)

@@ -21,40 +21,33 @@
 
 #include <QDebug>
 
-E131Controller::E131Controller(QString ipaddr, QList<QNetworkAddressEntry> interfaces,
-                                   QList<QString> macAddrList, Type type, QObject *parent)
+E131Controller::E131Controller(QString ipaddr, QString macAddress, Type type, quint32 line, QObject *parent)
     : QObject(parent)
 {
     m_ipAddr = QHostAddress(ipaddr);
-
-    int i = 0;
-    foreach(QNetworkAddressEntry iface, interfaces)
-    {
-        if (iface.ip() == m_ipAddr)
-        {
-            m_MACAddress = macAddrList.at(i);
-            break;
-        }
-        i++;
-    }
+    m_MACAddress = macAddress;
+    m_line = line;
 
     qDebug() << "[E131Controller] type: " << type;
     m_packetizer = new E131Packetizer();
     m_packetSent = 0;
     m_packetReceived = 0;
     m_type = type;
+    m_inputRefCount = 0;
+    m_outputRefCount = 0;
 
     m_UdpSocket = new QUdpSocket(this);
 
     // reset initial DMX values if we're an input
     if (type == Input)
     {
-        m_dmxValues.fill(0, 2048);
+        m_dmxValues.fill(0, 512);
         if (m_UdpSocket->bind(E131_DEFAULT_PORT, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint) == false)
         {
             qDebug() << Q_FUNC_INFO << "Socket input bind failed !!";
             return;
         }
+        m_inputRefCount = 1;
     }
     else
     {
@@ -63,6 +56,7 @@ E131Controller::E131Controller(QString ipaddr, QList<QNetworkAddressEntry> inter
             qDebug() << Q_FUNC_INFO << "Socket output bind failed !!";
             return;
         }
+        m_outputRefCount = 1;
     }
 
     connect(m_UdpSocket, SIGNAL(readyRead()),
@@ -77,37 +71,12 @@ E131Controller::~E131Controller()
     m_UdpSocket->close();
 }
 
-void E131Controller::addUniverse(quint32 line, int uni)
+void E131Controller::setType(Type type)
 {
-    if (m_universes.contains(uni) == false)
-    {
-        m_universes[uni] = line;
-        m_multicastAddr[uni] = QHostAddress(QString("239.255.0.%1").arg(uni + 1));
-        qDebug() << "[E131Controller] Universe:" << uni <<
-                 ", multicast address:" << m_multicastAddr[uni].toString() <<
-                 "(MAC:" << m_MACAddress << ")";
-        if (m_type == Input)
-            m_UdpSocket->joinMulticastGroup(m_multicastAddr[uni]);
-    }
+    m_type = type;
 }
 
-int E131Controller::getUniversesNumber()
-{
-    return m_universes.size();
-}
-
-bool E131Controller::removeUniverse(int uni)
-{
-    if (m_universes.contains(uni))
-    {
-
-        qDebug() << Q_FUNC_INFO << "Removing universe " << uni;
-        return m_universes.remove(uni);
-    }
-    return false;
-}
-
-int E131Controller::getType()
+E131Controller::Type E131Controller::type()
 {
     return m_type;
 }
@@ -122,15 +91,43 @@ quint64 E131Controller::getPacketReceivedNumber()
     return m_packetReceived;
 }
 
+void E131Controller::changeReferenceCount(E131Controller::Type type, int amount)
+{
+    if (type == Input)
+    {
+        m_inputRefCount += amount;
+        m_dmxValues.resize(m_inputRefCount * 512);
+    }
+    else
+        m_outputRefCount += amount;
+}
+
+int E131Controller::referenceCount(E131Controller::Type type)
+{
+    if (type == Input)
+        return m_inputRefCount;
+    else
+        return m_outputRefCount;
+}
+
 QString E131Controller::getNetworkIP()
 {
     return m_ipAddr.toString();
 }
 
-void E131Controller::sendDmx(const int &universe, const QByteArray &data)
+void E131Controller::sendDmx(const quint32 universe, const QByteArray &data)
 {
     QByteArray dmxPacket;
     m_packetizer->setupE131Dmx(dmxPacket, universe, data);
+    if (m_multicastAddr.contains(universe) == false)
+    {
+        m_multicastAddr[universe] = QHostAddress(QString("239.255.0.%1").arg(universe + 1));
+        qDebug() << "[E131Controller] Universe:" << universe <<
+                    ", multicast address:" << m_multicastAddr[universe].toString() <<
+                    "(MAC:" << m_MACAddress << ")";
+        if (m_type == Input)
+            m_UdpSocket->joinMulticastGroup(m_multicastAddr[universe]);
+    }
     qint64 sent = m_UdpSocket->writeDatagram(dmxPacket.data(), dmxPacket.size(),
                                              m_multicastAddr[universe], E131_DEFAULT_PORT);
     if (sent < 0)
@@ -157,23 +154,22 @@ void E131Controller::processPendingPackets()
             if (m_packetizer->checkPacket(datagram) == true)
             {
                 QByteArray dmxData;
-                int universe;
-                if (this->getType() == Input)
+                quint32 universe;
+                if (this->type() == Input)
                 {
                     m_packetReceived++;
                     if (m_packetizer->fillDMXdata(datagram, dmxData, universe) == true)
                     {
-                        if ((universe * 512) > m_dmxValues.length() || m_universes.contains(universe) == false)
-                        {
-                            qDebug() << "Universe " << universe << "not supported !";
+                        if (universe >= (quint32)m_inputRefCount)
                             break;
-                        }
-                        for (int i = 0; i < dmxData.length(); i++)
+
+                        quint32 uniAddr = universe << 9;
+                        for (quint32 i = 0; i < (quint32)dmxData.length(); i++)
                         {
-                            if (m_dmxValues.at(i + (universe * 512)) != dmxData.at(i))
+                            if (m_dmxValues.at(uniAddr + i) != dmxData.at(i))
                             {
-                                m_dmxValues[i + (universe * 512)] =  dmxData[i];
-                                emit valueChanged(m_universes[universe], i, (uchar)dmxData.at(i));
+                                m_dmxValues[uniAddr + i] =  dmxData[i];
+                                emit valueChanged(universe, m_line, i, (uchar)dmxData.at(i));
                             }
                         }
                     }

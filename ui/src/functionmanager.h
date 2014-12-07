@@ -35,6 +35,10 @@ class Fixture;
 class QMenu;
 class Doc;
 
+/** @addtogroup ui_functions
+ * @{
+ */
+
 class FunctionManager : public QWidget
 {
     Q_OBJECT
@@ -65,7 +69,7 @@ protected slots:
     void slotModeChanged();
     void slotDocClearing();
     void slotDocLoaded();
-    void slotFunctionChanged(quint32 id);
+    void slotFunctionNameChanged(quint32 id);
     void slotFunctionAdded(quint32 id);
 
 protected:
@@ -118,6 +122,7 @@ protected slots:
     void slotAddRGBMatrix();
     void slotAddScript();
     void slotAddAudio();
+    void slotAddVideo();
     void slotAddFolder();
 
     void slotSelectAutostartFunction();
@@ -141,6 +146,7 @@ protected:
     QAction* m_addRGBMatrixAction;
     QAction* m_addScriptAction;
     QAction* m_addAudioAction;
+    QAction* m_addVideoAction;
 
     QAction* m_autostartAction;
     QAction* m_wizardAction;
@@ -165,5 +171,7 @@ private:
     QWidget* m_editor;
     QWidget* m_scene_editor;
 };
+
+/** @} */
 
 #endif

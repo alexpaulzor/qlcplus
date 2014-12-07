@@ -20,7 +20,6 @@
 #ifndef RGBMATRIXEDITOR_H
 #define RGBMATRIXEDITOR_H
 
-#include <QPointer>
 #include <QWidget>
 #include <QHash>
 
@@ -35,6 +34,10 @@ class RGBMatrix;
 class QTimer;
 class Doc;
 
+/** @addtogroup ui_functions
+ * @{
+ */
+
 class RGBMatrixEditor : public QWidget, public Ui_RGBMatrixEditor
 {
     Q_OBJECT
@@ -46,6 +49,8 @@ class RGBMatrixEditor : public QWidget, public Ui_RGBMatrixEditor
 public:
     RGBMatrixEditor(QWidget* parent, RGBMatrix* mtx, Doc* doc);
     ~RGBMatrixEditor();
+
+    void stopTest();
 
 public slots:
     void slotFunctionManagerActive(bool active);
@@ -59,6 +64,8 @@ private:
     void fillAnimationCombo();
     void fillImageAnimationCombo();
     void updateExtraOptions();
+    void resetProperties(QLayoutItem *item);
+    void displayProperties(RGBScript *script);
 
     bool createPreviewItems();
 
@@ -70,6 +77,7 @@ private slots:
     void slotFixtureGroupActivated(int index);
     void slotStartColorButtonClicked();
     void slotEndColorButtonClicked();
+    void slotResetEndColorButtonClicked();
 
     void slotTextEdited(const QString& text);
     void slotFontButtonClicked();
@@ -91,6 +99,7 @@ private slots:
     void slotFadeOutChanged(int ms);
     void slotHoldChanged(int ms);
     void slotDurationTapped();
+    void slotDialDestroyed(QObject* dial);
 
     void slotTestClicked();
     void slotRestartTest();
@@ -100,16 +109,19 @@ private slots:
     void slotFixtureGroupChanged(quint32 id);
 
     void slotSaveToSequenceClicked();
+    void slotShapeToggle(bool);
+
+    void slotPropertyComboChanged(QString value);
+    void slotPropertySpinChanged(int value);
 
 private:
     Doc* m_doc;
     RGBMatrix* m_matrix; // The RGBMatrix being edited
 
     QList <RGBScript> m_scripts;
-    QList <RGBMap> m_previewMaps;
     Function::Direction m_previewDirection;
 
-    QPointer<SpeedDialWidget> m_speedDials;
+    SpeedDialWidget *m_speedDials;
 
     QGraphicsScene* m_scene;
     QTimer* m_previewTimer;
@@ -117,5 +129,7 @@ private:
     int m_previewStep;
     QHash <QLCPoint,QGraphicsItem*> m_previewHash;
 };
+
+/** @} */
 
 #endif

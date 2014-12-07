@@ -25,11 +25,15 @@
 
 #include <portaudio.h>
 
+/** @addtogroup engine_audio Audio
+ * @{
+ */
+
 class AudioRendererPortAudio : public AudioRenderer
 {
     Q_OBJECT
 public:
-    AudioRendererPortAudio(QObject * parent = 0);
+    AudioRendererPortAudio(QString device, QObject * parent = 0);
     ~AudioRendererPortAudio();
 
     /** @reimpl */
@@ -43,6 +47,8 @@ public:
 protected:
     /** @reimpl */
     qint64 writeAudio(unsigned char *data, qint64 maxSize);
+
+    int getPendingDataSize();
 
     /** @reimpl */
     void drain();
@@ -63,9 +69,10 @@ private:
                                PaStreamCallbackFlags statusFlags,
                                void *userData );
 
-    PaStream *stream;
-    QMutex m_mutex;
+    PaStream *m_paStream;
+    QMutex m_paMutex;
     QByteArray m_buffer;
+    QString m_device;
 
     int m_channels;
     int m_frameSize;
@@ -74,5 +81,7 @@ private:
     int m_writeBufferIndex;
     int m_readBufferIndex;
 };
+
+/** @} */
 
 #endif

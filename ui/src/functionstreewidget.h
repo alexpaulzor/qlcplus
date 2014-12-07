@@ -28,6 +28,10 @@
 class Function;
 class Doc;
 
+/** @addtogroup ui UI
+ * @{
+ */
+
 /**
  * FunctionsTreeWidget represents the tree of QLC+ functions,
  * including categories and folders.
@@ -61,9 +65,11 @@ public:
 
     void clearTree();
 
-    void functionChanged(quint32 fid);
+    void functionNameChanged(quint32 fid);
 
-    QTreeWidgetItem* functionAdded(quint32 fid);
+    /** Add the Function with the given ID and returns
+     *  a pointer to the created item */
+    QTreeWidgetItem* addFunction(quint32 fid);
 
     /** Return a suitable parent item for the $function's type */
     QTreeWidgetItem* parentItem(const Function* function);
@@ -114,5 +120,7 @@ protected:
 private:
     QList<QTreeWidgetItem *>m_draggedItems;
 };
+
+/** @} */
 
 #endif // FUNCTIONSTREEWIDGET_H

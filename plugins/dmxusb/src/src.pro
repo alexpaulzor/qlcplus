@@ -35,7 +35,7 @@ serialport {
     CONFIG(ftd2xx) {
         win32 {
             # Windows target
-            FTD2XXDIR    = C:/Qt/CDM20828
+            FTD2XXDIR    = C:/Qt/CDM21200
             LIBS        += -L$$FTD2XXDIR/i386 -lftd2xx
             INCLUDEPATH += $$FTD2XXDIR
             QMAKE_LFLAGS += -shared
@@ -46,10 +46,24 @@ serialport {
         }
         DEFINES     += FTD2XX
     } else {
-        CONFIG      += link_pkgconfig
-        PKGCONFIG   += libftdi libusb
-        DEFINES     += LIBFTDI
-        message(Building with libFTDI support.)
+        greaterThan(QT_MAJOR_VERSION, 4) {
+            macx:QT_CONFIG -= no-pkg-config
+        }
+        packagesExist(libftdi) {
+            CONFIG      += link_pkgconfig
+            PKGCONFIG   += libftdi libusb
+            DEFINES     += LIBFTDI
+            message(Building with libFTDI support.)
+        } else {
+            packagesExist(libftdi1) {
+                CONFIG      += link_pkgconfig
+                PKGCONFIG   += libftdi1 libusb-1.0
+                DEFINES     += LIBFTDI1
+                message(Building with libFTDI1 support.)
+            } else {
+                error(Neither libftdi-0.X nor libftdi-1.X found!)
+            }
+        }
     }
 }
 
@@ -59,22 +73,26 @@ HEADERS += dmxusb.h \
            dmxusbwidget.h \
            dmxusbconfig.h \
            enttecdmxusbpro.h \
-           enttecdmxusbprorx.h \
-           enttecdmxusbprotx.h \
            enttecdmxusbopen.h \
-           ultradmxusbprotx.h \
-           dmx4all.h \
+           stageprofi.h \
+           vinceusbdmx512.h \
            qlcftdi.h
+
+unix: HEADERS += nanodmx.h
 
 SOURCES += dmxusb.cpp \
            dmxusbwidget.cpp \
            dmxusbconfig.cpp \
            enttecdmxusbpro.cpp \
-           enttecdmxusbprorx.cpp \
-           enttecdmxusbprotx.cpp \
            enttecdmxusbopen.cpp \
-           dmx4all.cpp \
-           ultradmxusbprotx.cpp
+           stageprofi.cpp \
+           vinceusbdmx512.cpp
+
+INCLUDEPATH += ../../midi/common
+HEADERS += ../../midi/common/midiprotocol.h
+SOURCES += ../../midi/common/midiprotocol.cpp
+
+unix: SOURCES += nanodmx.cpp
 
 serialport {
     SOURCES += qlcftdi-qtserial.cpp
@@ -100,6 +118,9 @@ TRANSLATIONS += DMX_USB_fr_FR.ts
 TRANSLATIONS += DMX_USB_it_IT.ts
 TRANSLATIONS += DMX_USB_nl_NL.ts
 TRANSLATIONS += DMX_USB_cz_CZ.ts
+TRANSLATIONS += DMX_USB_pt_BR.ts
+TRANSLATIONS += DMX_USB_ca_ES.ts
+TRANSLATIONS += DMX_USB_ja_JP.ts
 
 # This must be after "TARGET = " and before target installation so that
 # install_name_tool can be run before target installation

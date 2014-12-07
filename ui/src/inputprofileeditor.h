@@ -22,12 +22,16 @@
 
 #include <QDialog>
 
+#include "qlcinputprofile.h"
 #include "ui_inputprofileeditor.h"
 
 class QLCInputChannel;
-class QLCInputProfile;
-class InputMap;
+class InputOutputMap;
 class QTimer;
+
+/** @addtogroup ui_io
+ * @{
+ */
 
 class InputProfileEditor : public QDialog, public Ui_InputProfileEditor
 {
@@ -38,7 +42,7 @@ class InputProfileEditor : public QDialog, public Ui_InputProfileEditor
      * Initialization
      ************************************************************************/
 public:
-    InputProfileEditor(QWidget* parent, QLCInputProfile* profile, InputMap* inputMap);
+    InputProfileEditor(QWidget* parent, QLCInputProfile* profile, InputOutputMap* ioMap);
     virtual ~InputProfileEditor();
 
 protected:
@@ -46,7 +50,7 @@ protected:
     void updateChannelItem(QTreeWidgetItem* item, QLCInputChannel* ch);
 
 private:
-    InputMap* m_inputMap;
+    InputOutputMap* m_ioMap;
 
     /************************************************************************
      * OK & Cancel
@@ -63,6 +67,9 @@ protected slots:
     void slotRemoveClicked();
     void slotEditClicked();
     void slotWizardClicked(bool checked);
+    void slotItemClicked(QTreeWidgetItem *item, int col);
+    void slotMovementComboChanged(int index);
+    void slotSensitivitySpinChanged(int value);
 
     void slotInputValueChanged(quint32 universe, quint32 channel, uchar value, const QString& key = 0);
     void slotTimerTimeout();
@@ -78,8 +85,13 @@ protected:
 public:
     const QLCInputProfile* profile() const;
 
+private:
+    QLCInputProfile::Type currentProfileType() const;
+
 protected:
     QLCInputProfile* m_profile;
 };
+
+/** @} */
 
 #endif

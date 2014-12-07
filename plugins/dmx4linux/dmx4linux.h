@@ -52,12 +52,16 @@ public:
     /** @reimp */
     QString pluginInfo();
 
+    /** @reimp */
+    void setParameter(QString name, QVariant &value)
+    { Q_UNUSED(name); Q_UNUSED(value); }
+
     /*********************************************************************
      * Outputs
      *********************************************************************/
 public:
     /** @reimp */
-    void openOutput(quint32 output);
+    bool openOutput(quint32 output);
 
     /** @reimp */
     void closeOutput(quint32 output);
@@ -69,7 +73,7 @@ public:
     QString outputInfo(quint32 output);
 
     /** @reimp */
-    void writeUniverse(quint32 output, const QByteArray& universe);
+    void writeUniverse(quint32 universe, quint32 output, const QByteArray& data);
 
 protected:
     /** File handle for /dev/dmx */
@@ -80,7 +84,7 @@ protected:
      *************************************************************************/
 public:
     /** @reimp */
-    void openInput(quint32 input) { Q_UNUSED(input); }
+    bool openInput(quint32 input) { Q_UNUSED(input); return false; }
 
     /** @reimp */
     void closeInput(quint32 input) { Q_UNUSED(input); }

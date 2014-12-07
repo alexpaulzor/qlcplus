@@ -22,6 +22,7 @@
 #include <QtXml>
 
 #include "qlcfixturedefcache.h"
+#include "channelmodifier.h"
 #include "qlcfixturemode.h"
 #include "qlcfixturehead.h"
 #include "qlcfixturedef.h"
@@ -348,67 +349,122 @@ quint32 Fixture::masterIntensityChannel(int head) const
     }
 }
 
-QList <quint32> Fixture::rgbChannels(int head) const
+QVector <quint32> Fixture::rgbChannels(int head) const
 {
     if (m_fixtureMode != NULL)
     {
         if (head < m_fixtureMode->heads().size())
             return m_fixtureMode->heads().at(head).rgbChannels();
         else
-            return QList <quint32> ();
+            return QVector <quint32> ();
     }
     else
     {
-        return QList <quint32> ();
+        return QVector <quint32> ();
     }
 }
 
-QList <quint32> Fixture::cmyChannels(int head) const
+QVector <quint32> Fixture::cmyChannels(int head) const
 {
     if (m_fixtureMode != NULL)
     {
         if (head < m_fixtureMode->heads().size())
             return m_fixtureMode->heads().at(head).cmyChannels();
         else
-            return QList <quint32> ();
+            return QVector <quint32> ();
     }
     else
     {
-        return QList <quint32> ();
+        return QVector <quint32> ();
     }
 }
 
-void Fixture::setExcludeFadeChannels(QList<int> indexes)
+void Fixture::setExcludeFadeChannels(QList<int> indices)
 {
-    if (indexes.count() > (int)channels())
+    if (indices.count() > (int)channels())
         return;
-    m_excludeFadeIndexes = indexes;
+    m_excludeFadeIndices = indices;
 }
 
 QList<int> Fixture::excludeFadeChannels()
 {
-    return m_excludeFadeIndexes;
+    return m_excludeFadeIndices;
 }
 
 void Fixture::setChannelCanFade(int idx, bool canFade)
 {
-    if (canFade == false && m_excludeFadeIndexes.contains(idx) == false)
+    if (canFade == false && m_excludeFadeIndices.contains(idx) == false)
     {
-        m_excludeFadeIndexes.append(idx);
-        qSort(m_excludeFadeIndexes.begin(), m_excludeFadeIndexes.end());
+        m_excludeFadeIndices.append(idx);
+        qSort(m_excludeFadeIndices.begin(), m_excludeFadeIndices.end());
     }
-    else if (canFade == true && m_excludeFadeIndexes.contains(idx) == true)
+    else if (canFade == true && m_excludeFadeIndices.contains(idx) == true)
     {
-        m_excludeFadeIndexes.removeOne(idx);
+        m_excludeFadeIndices.removeOne(idx);
     }
 }
 
 bool Fixture::channelCanFade(int index)
 {
-    if (m_excludeFadeIndexes.contains(index))
+    if (m_excludeFadeIndices.contains(index))
         return false;
 
     return true;
+}
+
+void Fixture::setForcedHTPChannels(QList<int> indices)
+{
+    if (indices.count() > (int)channels())
+        return;
+    m_forcedHTPIndices = indices;
+    // cross check: if a channel is forced HTP it must be removed from
+    // the forced LTP list (if present)
+    for (int i = 0; i < m_forcedHTPIndices.count(); i++)
+        m_forcedLTPIndices.removeAll(m_forcedHTPIndices.at(i));
+}
+
+QList<int> Fixture::forcedHTPChannels()
+{
+    return m_forcedHTPIndices;
+}
+
+void Fixture::setForcedLTPChannels(QList<int> indices)
+{
+    if (indices.count() > (int)channels())
+        return;
+    m_forcedLTPIndices = indices;
+    // cross check: if a channel is forced LTP it must be removed from
+    // the forced HTP list (if present)
+    for (int i = 0; i < m_forcedLTPIndices.count(); i++)
+        m_forcedHTPIndices.removeAll(m_forcedLTPIndices.at(i));
+}
+
+QList<int> Fixture::forcedLTPChannels()
+{
+    return m_forcedLTPIndices;
+}
+
+void Fixture::setChannelModifier(quint32 idx, ChannelModifier *mod)
+{
+    if (idx >= channels())
+        return;
+
+    if (mod == NULL)
+    {
+        m_channelModifiers.remove(idx);
+        return;
+    }
+
+    qDebug() << Q_FUNC_INFO << idx << mod->name();
+    m_channelModifiers[idx] = mod;
+}
+
+ChannelModifier *Fixture::channelModifier(quint32 idx)
+{
+    if (m_channelModifiers.contains(idx))
+        return m_channelModifiers[idx];
+
+    return NULL;
 }
 
 void Fixture::createGenericChannel()
@@ -530,6 +586,86 @@ QIcon Fixture::getIconFromType(QString type) const
     return QIcon(":/other.png");
 }
 
+QRectF Fixture::degreesRange(int head) const
+{
+    // TODO: handle fixtures with only pan or tilt
+
+    if (m_fixtureMode != NULL && head < m_fixtureMode->heads().size())
+    {
+        QLCPhysical physical(m_fixtureMode->physical());
+        qreal pan = physical.focusPanMax();
+        qreal tilt = physical.focusTiltMax();
+
+        if (pan != 0 && tilt != 0)
+        {
+            return QRectF(-pan/2, -tilt/2, pan, tilt);
+        }
+    }
+
+    return QRectF();
+}
+
+QLCFixtureDef *Fixture::genericRGBPanelDef(int columns)
+{
+    QLCFixtureDef *def = new QLCFixtureDef();
+    def->setManufacturer(KXMLFixtureGeneric);
+    def->setModel(KXMLFixtureRGBPanel);
+    def->setType("LED Bar");
+    def->setAuthor("QLC+");
+    for (int i = 0; i < columns; i++)
+    {
+        QLCChannel* red = new QLCChannel();
+        red->setName(QString("Red %1").arg(i + 1));
+        red->setGroup(QLCChannel::Intensity);
+        red->setColour(QLCChannel::Red);
+
+        QLCChannel* green = new QLCChannel();
+        green->setName(QString("Green %1").arg(i + 1));
+        green->setGroup(QLCChannel::Intensity);
+        green->setColour(QLCChannel::Green);
+
+        QLCChannel* blue = new QLCChannel();
+        blue->setName(QString("Blue %1").arg(i + 1));
+        blue->setGroup(QLCChannel::Intensity);
+        blue->setColour(QLCChannel::Blue);
+
+        def->addChannel(red);
+        def->addChannel(green);
+        def->addChannel(blue);
+    }
+
+    return def;
+}
+
+QLCFixtureMode *Fixture::genericRGBPanelMode(QLCFixtureDef *def, quint32 width, quint32 height)
+{
+    Q_ASSERT(def != NULL);
+    QLCFixtureMode *mode = new QLCFixtureMode(def);
+    mode->setName("Default");
+    QList<QLCChannel *>channels = def->channels();
+    for (int i = 0; i < channels.count(); i++)
+    {
+        QLCChannel *ch = channels.at(i);
+        mode->insertChannel(ch, i);
+        if (i%3 == 0)
+        {
+            QLCFixtureHead head;
+            head.addChannel(i);
+            head.addChannel(i+1);
+            head.addChannel(i+2);
+            mode->insertHead(-1, head);
+        }
+    }
+    QLCPhysical physical;
+    physical.setWidth(width);
+    physical.setHeight(height);
+    physical.setDepth(height);
+
+    mode->setPhysical(physical);
+
+    return mode;
+}
+
 /*****************************************************************************
  * Load & Save
  *****************************************************************************/
@@ -578,7 +714,12 @@ bool Fixture::loadXML(const QDomElement& root, Doc *doc,
     quint32 universe = 0;
     quint32 address = 0;
     quint32 channels = 0;
+    quint32 width = 0, height = 0;
     QList<int> excludeList;
+    QList<int> forcedHTP;
+    QList<int> forcedLTP;
+    QList<quint32>modifierIndices;
+    QList<ChannelModifier *>modifierPointers;
 
     if (root.tagName() != KXMLFixture)
     {
@@ -602,6 +743,14 @@ bool Fixture::loadXML(const QDomElement& root, Doc *doc,
         else if (tag.tagName() == KXMLQLCFixtureMode)
         {
             modeName = tag.text();
+        }
+        else if (tag.tagName() == KXMLQLCPhysicalDimensionsWeight)
+        {
+            width = tag.text().toUInt();
+        }
+        else if (tag.tagName() == KXMLQLCPhysicalDimensionsHeight)
+        {
+            height = tag.text().toUInt();
         }
         else if (tag.tagName() == KXMLFixtureID)
         {
@@ -631,6 +780,37 @@ bool Fixture::loadXML(const QDomElement& root, Doc *doc,
             for (int i = 0; i < values.count(); i++)
                 excludeList.append(values.at(i).toInt());
         }
+        else if (tag.tagName() == KXMLFixtureForcedHTP)
+        {
+            QString list = tag.text();
+            QStringList values = list.split(",");
+
+            for (int i = 0; i < values.count(); i++)
+                forcedHTP.append(values.at(i).toInt());
+        }
+        else if (tag.tagName() == KXMLFixtureForcedLTP)
+        {
+            QString list = tag.text();
+            QStringList values = list.split(",");
+
+            for (int i = 0; i < values.count(); i++)
+                forcedLTP.append(values.at(i).toInt());
+        }
+        else if (tag.tagName() == KXMLFixtureChannelModifier)
+        {
+            if (tag.hasAttribute(KXMLFixtureChannelIndex) &&
+                tag.hasAttribute(KXMLFixtureModifierName))
+            {
+                quint32 chIdx = tag.attribute(KXMLFixtureChannelIndex).toUInt();
+                QString modName = tag.attribute(KXMLFixtureModifierName);
+                ChannelModifier *chMod = doc->modifiersCache()->modifier(modName);
+                if (chMod != NULL)
+                {
+                    modifierIndices.append(chIdx);
+                    modifierPointers.append(chMod);
+                }
+            }
+        }
         else
         {
             qWarning() << Q_FUNC_INFO << "Unknown fixture tag:" << tag.tagName();
@@ -640,7 +820,7 @@ bool Fixture::loadXML(const QDomElement& root, Doc *doc,
     }
 
     /* Find the given fixture definition, unless its a generic dimmer */
-    if (model != KXMLFixtureGeneric)
+    if (model != KXMLFixtureGeneric && model != KXMLFixtureRGBPanel)
     {
         fixtureDef = fixtureDefCache->fixtureDef(manufacturer, model);
         if (fixtureDef == NULL)
@@ -690,6 +870,12 @@ bool Fixture::loadXML(const QDomElement& root, Doc *doc,
         return false;
     }
 
+    if (model == KXMLFixtureRGBPanel)
+    {
+        fixtureDef = genericRGBPanelDef(channels / 3);
+        fixtureMode = genericRGBPanelMode(fixtureDef, width, height);
+    }
+
     if (fixtureDef != NULL && fixtureMode != NULL)
     {
         /* Assign fixtureDef & mode only if BOTH are not NULL */
@@ -705,6 +891,10 @@ bool Fixture::loadXML(const QDomElement& root, Doc *doc,
     setUniverse(universe);
     setName(name);
     setExcludeFadeChannels(excludeList);
+    setForcedHTPChannels(forcedHTP);
+    setForcedLTPChannels(forcedLTP);
+    for (int i = 0; i < modifierIndices.count(); i++)
+        setChannelModifier(modifierIndices.at(i), modifierPointers.at(i));
     setID(id);
 
     return true;
@@ -756,6 +946,20 @@ bool Fixture::saveXML(QDomDocument* doc, QDomElement* wksp_root) const
 
     tag.appendChild(text);
 
+    /* RGB Panel physical dimensions */
+    if (m_fixtureDef != NULL && m_fixtureDef->model() == KXMLFixtureRGBPanel && m_fixtureMode != NULL)
+    {
+        tag = doc->createElement(KXMLQLCPhysicalDimensionsWeight);
+        root.appendChild(tag);
+        text = doc->createTextNode(QString::number(m_fixtureMode->physical().width()));
+        tag.appendChild(text);
+
+        tag = doc->createElement(KXMLQLCPhysicalDimensionsHeight);
+        root.appendChild(tag);
+        text = doc->createTextNode(QString::number(m_fixtureMode->physical().height()));
+        tag.appendChild(text);
+    }
+
     /* ID */
     tag = doc->createElement(KXMLFixtureID);
     root.appendChild(tag);
@@ -790,19 +994,67 @@ bool Fixture::saveXML(QDomDocument* doc, QDomElement* wksp_root) const
     text = doc->createTextNode(str);
     tag.appendChild(text);
 
-    if (m_excludeFadeIndexes.count() > 0)
+    if (m_excludeFadeIndices.count() > 0)
     {
         tag = doc->createElement(KXMLFixtureExcludeFade);
         root.appendChild(tag);
         QString list;
-        for (int i = 0; i < m_excludeFadeIndexes.count(); i++)
+        for (int i = 0; i < m_excludeFadeIndices.count(); i++)
         {
             if (list.isEmpty() == false)
                 list.append(QString(","));
-            list.append(QString("%1").arg(m_excludeFadeIndexes.at(i)));
+            list.append(QString("%1").arg(m_excludeFadeIndices.at(i)));
         }
         text = doc->createTextNode(list);
         tag.appendChild(text);
+    }
+
+    if (m_forcedHTPIndices.count() > 0)
+    {
+        tag = doc->createElement(KXMLFixtureForcedHTP);
+        root.appendChild(tag);
+        QString list;
+        for (int i = 0; i < m_forcedHTPIndices.count(); i++)
+        {
+            if (list.isEmpty() == false)
+                list.append(QString(","));
+            list.append(QString("%1").arg(m_forcedHTPIndices.at(i)));
+        }
+        text = doc->createTextNode(list);
+        tag.appendChild(text);
+    }
+
+    if (m_forcedLTPIndices.count() > 0)
+    {
+        tag = doc->createElement(KXMLFixtureForcedLTP);
+        root.appendChild(tag);
+        QString list;
+        for (int i = 0; i < m_forcedLTPIndices.count(); i++)
+        {
+            if (list.isEmpty() == false)
+                list.append(QString(","));
+            list.append(QString("%1").arg(m_forcedLTPIndices.at(i)));
+        }
+        text = doc->createTextNode(list);
+        tag.appendChild(text);
+    }
+
+    if (m_channelModifiers.isEmpty() == false)
+    {
+        QHashIterator<quint32, ChannelModifier *> it(m_channelModifiers);
+        while (it.hasNext())
+        {
+            it.next();
+            quint32 ch = it.key();
+            ChannelModifier *mod = it.value();
+            if (mod != NULL)
+            {
+                tag = doc->createElement(KXMLFixtureChannelModifier);
+                tag.setAttribute(KXMLFixtureChannelIndex, ch);
+                tag.setAttribute(KXMLFixtureModifierName, mod->name());
+                root.appendChild(tag);
+            }
+        }
     }
 
     return true;

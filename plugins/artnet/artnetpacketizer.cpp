@@ -127,10 +127,12 @@ void ArtNetPacketizer::setupArtNetDmx(QByteArray& data, const int &universe, con
     data.append('\0'); // Physical
     data.append((char)(universe & 0x00FF));
     data.append((char)(universe >> 8));
-    int len = values.length();
+    int padLength = values.isEmpty() ? 2 : (values.length() % 2); // length must be even in the range 2-512
+    int len = values.length() + padLength;
     data.append((char)(len >> 8));
     data.append((char)(len & 0x00FF));
     data.append(values);
+    data.append(QByteArray(padLength, 0));
 
     if (m_sequence[universe] == 0xff)
         m_sequence[universe] = 1;
@@ -176,23 +178,22 @@ bool ArtNetPacketizer::fillArtPollReplyInfo(QByteArray& data, ArtNetNodeInfo &in
     return true;
 }
 
-bool ArtNetPacketizer::fillDMXdata(QByteArray& data, QByteArray &dmx, int &universe)
+bool ArtNetPacketizer::fillDMXdata(QByteArray& data, QByteArray &dmx, quint32 &universe)
 {
     if (data.isNull())
         return false;
     dmx.clear();
     //char sequence = data.at(12);
     //qDebug() << "Sequence: " << sequence;
-    // phisycal skipped
-    universe = data.at(14);
-    // net skipped
+    // char physical = data.at(13) // skipped
+    universe = (data.at(15) << 8) + data.at(14);
+
     unsigned int msb = (data.at(16)&0xff);
     unsigned int lsb = (data.at(17)&0xff);
     int length = (msb << 8) | lsb;
 
-    qDebug() << "length: " << length;
-    for (int i = 18; i < 18 + length; i++)
-        dmx.append(data.at(i));
+    //qDebug() << "length: " << length;
+    dmx.append(data.mid(18, length));
     return true;
 }
 

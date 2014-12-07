@@ -80,13 +80,15 @@ int Peperoni::capabilities() const
  * Outputs
  *****************************************************************************/
 
-void Peperoni::openOutput(quint32 output)
+bool Peperoni::openOutput(quint32 output)
 {
     if (m_usbdmx == NULL)
-        return;
+        return false;
 
     if (output < quint32(m_devices.size()))
-        m_devices.at(output)->open();
+        return m_devices.at(output)->open();
+
+    return false;
 }
 
 void Peperoni::closeOutput(quint32 output)
@@ -139,7 +141,7 @@ QString Peperoni::outputInfo(quint32 output)
         str += tr("The shared library usbdmx.dll could not be found or is too old to be used with QLC.");
         str += QString("</P>");
     }
-    else if (output == QLCIOPlugin::invalidLine() && output < quint32(m_devices.size()))
+    else if (output != QLCIOPlugin::invalidLine() && output < quint32(m_devices.size()))
     {
         str += m_devices.at(output)->infoText();
     }
@@ -150,10 +152,12 @@ QString Peperoni::outputInfo(quint32 output)
     return str;
 }
 
-void Peperoni::writeUniverse(quint32 output, const QByteArray& universe)
+void Peperoni::writeUniverse(quint32 universe, quint32 output, const QByteArray &data)
 {
+    Q_UNUSED(universe)
+
     if (output < quint32(m_devices.size()))
-        m_devices.at(output)->outputDMX(universe);
+        m_devices.at(output)->outputDMX(data);
 }
 
 void Peperoni::rescanDevices()

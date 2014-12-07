@@ -29,13 +29,15 @@
 class FunctionsTreeWidget;
 class QTreeWidgetItem;
 class MasterTimer;
-class OutputMap;
-class InputMap;
 class QToolBar;
 class QAction;
 class QWidget;
 class Fixture;
 class Doc;
+
+/** @addtogroup ui UI
+ * @{
+ */
 
 #define SETTINGS_FILTER "functionselection/filter"
 
@@ -72,6 +74,17 @@ public:
 
 private:
     bool m_none;
+    QTreeWidgetItem *m_noneItem;
+
+    /*********************************************************************
+     * New track entry
+     *********************************************************************/
+public:
+    void showNewTrack(bool show = false);
+
+private:
+    bool m_newTrack;
+    QTreeWidgetItem *m_newTrackItem;
 
     /*********************************************************************
      * Multi-selection
@@ -126,6 +139,9 @@ protected slots:
     void slotRGBMatrixChecked(bool state);
     void slotShowChecked(bool state);
     void slotAudioChecked(bool state);
+#if QT_VERSION >= 0x050000
+    void slotVideoChecked(bool state);
+#endif
 
 private:
     int m_filter;
@@ -142,8 +158,12 @@ public:
     /** Get a list of disabled functionIDs */
     QList <quint32> disabledFunctions() const;
 
+    /** Show Sequences even if Chasers are not displayed */
+    void showSequences(bool show = false);
+
 protected:
     QList <quint32> m_disabledFunctions;
+    bool m_showSequences;
 
     /*********************************************************************
      * Selection
@@ -169,5 +189,7 @@ protected slots:
     void slotItemDoubleClicked(QTreeWidgetItem* item);
 
 };
+
+/** @} */
 
 #endif

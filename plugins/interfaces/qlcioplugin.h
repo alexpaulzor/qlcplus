@@ -37,7 +37,7 @@
  * When QLC has successfully loaded a plugin, it will call init() exactly
  * once for that plugin. After that, it is assumed that either the
  * plugin auto-senses the devices it supports or the user must manually try
- * to search for new devices thru a custom configuration dialog that can be
+ * to search for new devices through a custom configuration dialog that can be
  * opened with configure().
  *
  * Plugins should not leave any resources open unless open() is called. And
@@ -71,7 +71,7 @@ public:
     /**
      * Initialize the plugin. Since plugins cannot have a user-defined
      * constructor, any initialization prior to opening any HW must be
-     * done thru this second-stage initialization method. This method is
+     * done through this second-stage initialization method. This method is
      * called exactly once after each plugin has been successfully loaded
      * and before calling other plugin interface methods.
      *
@@ -87,7 +87,12 @@ public:
     virtual QString name() = 0;
 
     /** Plugin's I/O capabilities */
-    enum Capability { Output = 0x1, Input = 0x2, Feedback = 0x4 };
+    enum Capability {
+        Output      = 1 << 0,
+        Input       = 1 << 1,
+        Feedback    = 1 << 2,
+        Infinite    = 1 << 3
+    };
 
     /**
      * Get plugin capabilities as an OR'ed bitmask
@@ -106,23 +111,32 @@ public:
     /** Invalid input/output number */
     static quint32 invalidLine() { return UINT_MAX; }
 
+    /**
+     * Set an arbitrary parameter useful for the plugin. This is similar
+     * to Qt's setProperty
+     *
+     * @param name A string containing the parameter name
+     * @param value A QVariant value representing the parameter data
+     */
+    virtual void setParameter(QString name, QVariant &value) = 0;
+
     /*************************************************************************
      * Outputs
      *************************************************************************/
 public:
     /**
      * Open the specified output line so that the plugin can start sending
-     * DMX data thru that line.
+     * DMX data through that line.
      *
      * This is a pure virtual method that must be implemented by all plugins.
      *
      * @param output The output line to open
      */
-    virtual void openOutput(quint32 output) = 0;
+    virtual bool openOutput(quint32 output) = 0;
 
     /**
      * Close the specified output line so that the plugin can stop
-     * sending output data thru that line.
+     * sending output data through that line.
      *
      * This is a pure virtual method that must be implemented by all plugins.
      *
@@ -157,7 +171,7 @@ public:
      * @param output The output universe to write to
      * @param universe The universe data to write
      */
-    virtual void writeUniverse(quint32 output, const QByteArray& universe) = 0;
+    virtual void writeUniverse(quint32 universe, quint32 output, const QByteArray& data) = 0;
 
     /*************************************************************************
      * Inputs
@@ -171,7 +185,7 @@ public:
      *
      * @param input The input line to open
      */
-    virtual void openInput(quint32 input) = 0;
+    virtual bool openInput(quint32 input) = 0;
 
     /**
      * Close the specified input line so that the plugin can stop sending input
@@ -223,11 +237,17 @@ signals:
      * to be reacted to (if applicable). This is practically THE WAY for
      * input plugins to provide input data to QLC.
      *
+     * @param universe The universe ID detected from the data received.
+     *                 This is irrelevant for most of the plugins, but
+     *                 for network plugins like ArtNet and E1.31 this is
+     *                 fundamental if the same line is connected to several
+     *                 universes
      * @param input The input line whose channel has changed value
      * @param channel The channel that has changed its value
      * @param value The newly-changed channel value
+     * @param key a string to identify a channel by name (ATM used only by OSC)
      */
-    void valueChanged(quint32 input, quint32 channel, uchar value, const QString& key = 0);
+    void valueChanged(quint32 universe, quint32 input, quint32 channel, uchar value, const QString& key = 0);
 
     /*************************************************************************
      * Configure

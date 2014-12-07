@@ -60,15 +60,19 @@ public:
     /** @reimp */
     QString pluginInfo();
 
+    /** @reimp */
+    void setParameter(QString name, QVariant &value)
+    { Q_UNUSED(name); Q_UNUSED(value); }
+
     /** Attempt to bind the socket to listen to EWing::UDPPort */
-    void reBindSocket();
+    bool reBindSocket();
 
     /*************************************************************************
      * Outputs
      *************************************************************************/
 public:
     /** @reimp */
-    void openOutput(quint32 output) { Q_UNUSED(output); }
+    bool openOutput(quint32 output) { Q_UNUSED(output); return false; }
 
     /** @reimp */
     void closeOutput(quint32 output) { Q_UNUSED(output); }
@@ -77,8 +81,8 @@ public:
     QStringList outputs() { return QStringList(); }
 
     /** @reimp */
-    void writeUniverse(quint32 output, const QByteArray& universe)
-        { Q_UNUSED(output); Q_UNUSED(universe); }
+    void writeUniverse(quint32 universe, quint32 output, const QByteArray& data)
+    { Q_UNUSED(output); Q_UNUSED(universe); Q_UNUSED(data); }
 
     /** @reimp */
     QString outputInfo(quint32 output) { Q_UNUSED(output); return QString(); }
@@ -88,7 +92,7 @@ public:
      *************************************************************************/
 public:
     /** @reimp */
-    void openInput(quint32 input);
+    bool openInput(quint32 input);
 
     /** @reimp */
     void closeInput(quint32 input);

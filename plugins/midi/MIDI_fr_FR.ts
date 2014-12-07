@@ -6,7 +6,7 @@
     <message>
         <location filename="common/configuremidiplugin.ui" line="14"/>
         <source>Configure MIDI Plugin</source>
-        <translation>Configurer le greffon MIDI</translation>
+        <translation>Configuration du plugin MIDI</translation>
     </message>
     <message>
         <location filename="common/configuremidiplugin.ui" line="47"/>
@@ -26,7 +26,7 @@
     <message>
         <location filename="common/configuremidiplugin.ui" line="62"/>
         <source>Init Message</source>
-        <translation type="unfinished"></translation>
+        <translation>Message d&apos;init</translation>
     </message>
     <message>
         <location filename="common/configuremidiplugin.ui" line="20"/>
@@ -46,146 +46,146 @@
     <message>
         <location filename="common/configuremidiplugin.cpp" line="214"/>
         <source>None</source>
-        <translation type="unfinished"></translation>
+        <translation>Aucun</translation>
     </message>
 </context>
 <context>
     <name>MidiPlugin</name>
     <message>
-        <location filename="common/midiplugin.cpp" line="132"/>
+        <location filename="common/midiplugin.cpp" line="134"/>
         <source>This plugin provides input/output support for MIDI devices.</source>
-        <translation>Ce plugin fournit les fonctions d&apos;entrée/sortie des périphériques MIDI.</translation>
+        <translation>Ce plugin permet le support des périphériques MIDI.</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="146"/>
+        <location filename="common/midiplugin.cpp" line="148"/>
         <source>No output support available.</source>
-        <translation>Pas de sorties MIDI.</translation>
+        <translation>Support de la sortie indisponible.</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="154"/>
+        <location filename="common/midiplugin.cpp" line="156"/>
         <source>Output</source>
-        <translation>Sorties</translation>
+        <translation>Sortie</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="157"/>
-        <location filename="common/midiplugin.cpp" line="259"/>
+        <location filename="common/midiplugin.cpp" line="159"/>
+        <location filename="common/midiplugin.cpp" line="264"/>
         <source>Open</source>
         <translation>Ouvert</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="159"/>
-        <location filename="common/midiplugin.cpp" line="261"/>
+        <location filename="common/midiplugin.cpp" line="161"/>
+        <location filename="common/midiplugin.cpp" line="266"/>
         <source>Not Open</source>
-        <translation>Non Ouvert</translation>
+        <translation>Fermé</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="160"/>
-        <location filename="common/midiplugin.cpp" line="262"/>
+        <location filename="common/midiplugin.cpp" line="162"/>
+        <location filename="common/midiplugin.cpp" line="267"/>
         <source>Status</source>
         <translation>État</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="166"/>
+        <location filename="common/midiplugin.cpp" line="168"/>
         <source>Invalid Output</source>
-        <translation>Sortie Invalide</translation>
+        <translation>Sortie invalide</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="248"/>
+        <location filename="common/midiplugin.cpp" line="253"/>
         <source>No input support available.</source>
-        <translation>Pas d&apos;entrées MIDI.</translation>
+        <translation>Support de l&apos;entrée indisponible.</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="256"/>
+        <location filename="common/midiplugin.cpp" line="261"/>
         <source>Input</source>
         <translation>Entrée</translation>
     </message>
     <message>
-        <location filename="common/midiplugin.cpp" line="268"/>
+        <location filename="common/midiplugin.cpp" line="273"/>
         <source>Invalid Input</source>
-        <translation>Entrée Invalide</translation>
+        <translation>Entrée invalide</translation>
     </message>
 </context>
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="116"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="125"/>
         <source>No error occurred.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aucune erreur n&apos;est survenue.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="118"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="127"/>
         <source>An error occurred when reading from the file.</source>
-        <translation type="unfinished"></translation>
+        <translation>Une erreur est survenue durant la lecture depuis le fichier.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="120"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="129"/>
         <source>An error occurred when writing to the file.</source>
-        <translation type="unfinished"></translation>
+        <translation>Une erreur est survenue durant l&apos;écriture du fichier.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="122"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="131"/>
         <source>A fatal error occurred.</source>
-        <translation type="unfinished"></translation>
+        <translation>Une erreur fatale est survenue.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="124"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="133"/>
         <source>Resource error occurred.</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Une erreur liée aux ressources est survenue.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="126"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="135"/>
         <source>The file could not be opened.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier n&apos;a pas pu être ouvert.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="128"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="137"/>
         <source>The operation was aborted.</source>
-        <translation type="unfinished"></translation>
+        <translation>L&apos;opération a été interrompue.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="130"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="139"/>
         <source>A timeout occurred.</source>
-        <translation type="unfinished"></translation>
+        <translation>Une expiration est survenue.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="132"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="141"/>
         <source>An unspecified error occurred.</source>
-        <translation type="unfinished"></translation>
+        <translation>Une erreur non spécifiée est survenue.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="134"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="143"/>
         <source>The file could not be removed.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier n&apos;a pas pu être supprimé.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="136"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="145"/>
         <source>The file could not be renamed.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier n&apos;a pas pu être renommé.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="138"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="147"/>
         <source>The position in the file could not be changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>La position dans le fichier n&apos;a pas pu être changée.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="140"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="149"/>
         <source>The file could not be resized.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier n&apos;a pas pu être redimensionné.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="142"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="151"/>
         <source>The file could not be accessed.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier n&apos;est pas accessible.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="144"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="153"/>
         <source>The file could not be copied.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le fichier n&apos;a pas pu être copié.</translation>
     </message>
     <message>
-        <location filename="../../engine/src/qlcfile.cpp" line="146"/>
+        <location filename="../../engine/src/qlcfile.cpp" line="155"/>
         <source>An unknown error occurred.</source>
-        <translation type="unfinished"></translation>
+        <translation>Une erreur inconnue est survenue.</translation>
     </message>
 </context>
 </TS>

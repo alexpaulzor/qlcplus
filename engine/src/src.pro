@@ -8,10 +8,11 @@ TARGET   = qlcplusengine
 
 CONFIG  += qt
 QT      += core xml script gui
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4) {
+  QT += widgets multimedia multimediawidgets
+  macx:QT_CONFIG -= no-pkg-config
+}
 
-# Uncomment to enable Phonon audio support
-#QT += phonon
 CONFIG += link_pkgconfig
 
 QTPLUGIN =
@@ -44,8 +45,9 @@ HEADERS += avolitesd4parser.h \
            qlcinputchannel.h \
            qlcinputprofile.h \
            qlcinputsource.h \
-           qlcphysical.h \
-           qlccapability.h
+           qlcmodifierscache.h \
+           qlcphysical.h
+
 # Audio
 HEADERS += audio/audio.h \
            audio/audiodecoder.h \
@@ -53,50 +55,66 @@ HEADERS += audio/audio.h \
            audio/audioparameters.h \
            audio/audiocapture.h
 
-unix:!macx:HEADERS += audio/audiorenderer_alsa.h audio/audiocapture_alsa.h
-win32:HEADERS += audio/audiorenderer_waveout.h audio/audiocapture_wavein.h
+lessThan(QT_MAJOR_VERSION, 5) {
+  unix:!macx:HEADERS += audio/audiorenderer_alsa.h audio/audiocapture_alsa.h
+  win32:HEADERS += audio/audiorenderer_waveout.h audio/audiocapture_wavein.h
+}
+else {
+  HEADERS += audio/audiorenderer_qt.h audio/audiocapture_qt.h
+  HEADERS += video.h
+}
 
 # Engine
 HEADERS += bus.h \
            channelsgroup.h \
+           channelmodifier.h \
            chaser.h \
            chaserrunner.h \
            chaserstep.h \
            collection.h \
            cue.h \
-           cuelistrunner.h \
            cuestack.h \
            doc.h \
            dmxdumpfactoryproperties.h \
+           dmxsource.h \
            efx.h \
            efxfixture.h \
+           efxuistate.h \
            fadechannel.h \
            fixture.h \
            fixturegroup.h \
            function.h \
+           functionuistate.h \
            genericdmxsource.h \
            genericfader.h \
+           grandmaster.h \
            grouphead.h \
-           inputmap.h \
+           inputoutputmap.h \
            inputpatch.h \
            ioplugincache.h \
            mastertimer.h \
-           universearray.h \
-           outputmap.h \
+           monitorproperties.h \
            outputpatch.h \
            qlcclipboard.h \
            qlcpoint.h \
            rgbalgorithm.h \
+           rgbaudio.h \
            rgbmatrix.h \
            rgbimage.h \
+           rgbplain.h \
            rgbscript.h \
+           rgbscriptproperty.h \
+           rgbscriptscache.h \
            rgbtext.h \
            scene.h \
+           sceneuistate.h \
            scenevalue.h \
            script.h \
            show.h \
+           showfunction.h \
            showrunner.h \
-           track.h
+           track.h \
+           universe.h
 
 win32:HEADERS += mastertimer-win32.h
 unix:HEADERS  += mastertimer-unix.h
@@ -114,7 +132,9 @@ SOURCES += avolitesd4parser.cpp \
            qlcinputchannel.cpp \
            qlcinputprofile.cpp \
            qlcinputsource.cpp \
+           qlcmodifierscache.cpp \
            qlcphysical.cpp
+
 # Audio
 SOURCES += audio/audio.cpp \
            audio/audiodecoder.cpp \
@@ -122,62 +142,76 @@ SOURCES += audio/audio.cpp \
            audio/audioparameters.cpp \
            audio/audiocapture.cpp
 
-unix:!macx:SOURCES += audio/audiorenderer_alsa.cpp audio/audiocapture_alsa.cpp
-win32:SOURCES += audio/audiorenderer_waveout.cpp audio/audiocapture_wavein.cpp
+lessThan(QT_MAJOR_VERSION, 5) {
+  unix:!macx:SOURCES += audio/audiorenderer_alsa.cpp audio/audiocapture_alsa.cpp
+  win32:SOURCES += audio/audiorenderer_waveout.cpp audio/audiocapture_wavein.cpp
 
-macx {
-  system(pkg-config --exists portaudio-2.0) {
-    DEFINES += HAS_PORTAUDIO
-    PKGCONFIG += portaudio-2.0
-    HEADERS += audio/audiorenderer_portaudio.h audio/audiocapture_portaudio.h
-    SOURCES += audio/audiorenderer_portaudio.cpp audio/audiocapture_portaudio.cpp
+  macx {
+    system(pkg-config --exists portaudio-2.0) {
+      DEFINES += HAS_PORTAUDIO
+      PKGCONFIG += portaudio-2.0
+      HEADERS += audio/audiorenderer_portaudio.h audio/audiocapture_portaudio.h
+      SOURCES += audio/audiorenderer_portaudio.cpp audio/audiocapture_portaudio.cpp
+    }
+
+  #  HEADERS += audio/audiorenderer_coreaudio.h
+  #  SOURCES += audio/audiorenderer_coreaudio.cpp
   }
-
-#  HEADERS += audio/audiorenderer_coreaudio.h
-#  SOURCES += audio/audiorenderer_coreaudio.cpp
+}
+else {
+  SOURCES += audio/audiorenderer_qt.cpp audio/audiocapture_qt.cpp
+  SOURCES += video.cpp
 }
 
 # Engine
 SOURCES += bus.cpp \
            channelsgroup.cpp \
+           channelmodifier.cpp \
            chaser.cpp \
            chaserrunner.cpp \
            chaserstep.cpp \
            collection.cpp \
            cue.cpp \
-           cuelistrunner.cpp \
            cuestack.cpp \
            doc.cpp \
            dmxdumpfactoryproperties.cpp \
            efx.cpp \
            efxfixture.cpp \
+           efxuistate.cpp \
            fadechannel.cpp \
            fixture.cpp \
            fixturegroup.cpp \
            function.cpp \
+           functionuistate.cpp \
            genericdmxsource.cpp \
            genericfader.cpp \
+           grandmaster.cpp \
            grouphead.cpp \
-           inputmap.cpp \
+           inputoutputmap.cpp \
            inputpatch.cpp \
            ioplugincache.cpp \
            mastertimer.cpp \
-           universearray.cpp \
-           outputmap.cpp \
+           monitorproperties.cpp \
            outputpatch.cpp \
            qlcclipboard.cpp \
            qlcpoint.cpp \
            rgbalgorithm.cpp \
+           rgbaudio.cpp \
            rgbmatrix.cpp \
            rgbimage.cpp \
+           rgbplain.cpp \
            rgbscript.cpp \
+           rgbscriptscache.cpp \
            rgbtext.cpp \
            scene.cpp \
+           sceneuistate.cpp \
            scenevalue.cpp \
            script.cpp \
            show.cpp \
+           showfunction.cpp \
            showrunner.cpp \
-           track.cpp
+           track.cpp \
+           universe.cpp
 
 win32:SOURCES += mastertimer-win32.cpp
 unix:SOURCES  += mastertimer-unix.cpp
@@ -243,6 +277,8 @@ macx {
     conf.commands += echo \"$$LITERAL_HASH define USERINPUTPROFILEDIR \\\"$$USERINPUTPROFILEDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define MIDITEMPLATEDIR \\\"$$MIDITEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define USERMIDITEMPLATEDIR \\\"$$USERMIDITEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define MODIFIERSTEMPLATEDIR \\\"$$MODIFIERSTEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define USERMODIFIERSTEMPLATEDIR \\\"$$USERMODIFIERSTEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define FIXTUREDIR \\\"$$FIXTUREDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define USERFIXTUREDIR \\\"$$USERFIXTUREDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define PLUGINDIR \\\"$$PLUGINDIR\\\"\" >> $$CONFIGFILE &&
@@ -250,6 +286,7 @@ macx {
     conf.commands += echo \"$$LITERAL_HASH define RGBSCRIPTDIR \\\"$$RGBSCRIPTDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define USERRGBSCRIPTDIR \\\"$$USERRGBSCRIPTDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define GOBODIR \\\"$$GOBODIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define WEBFILESDIR \\\"$$WEBFILESDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH endif\" >> $$CONFIGFILE
 }
 unix:!macx {
@@ -264,6 +301,8 @@ unix:!macx {
     conf.commands += echo \"$$LITERAL_HASH define USERINPUTPROFILEDIR \\\"$$USERINPUTPROFILEDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define MIDITEMPLATEDIR \\\"$$INSTALLROOT/$$MIDITEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define USERMIDITEMPLATEDIR \\\"$$USERMIDITEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define MODIFIERSTEMPLATEDIR \\\"$$INSTALLROOT/$$MODIFIERSTEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define USERMODIFIERSTEMPLATEDIR \\\"$$USERMODIFIERSTEMPLATEDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define FIXTUREDIR \\\"$$INSTALLROOT/$$FIXTUREDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define USERFIXTUREDIR \\\"$$USERFIXTUREDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define PLUGINDIR \\\"$$INSTALLROOT/$$PLUGINDIR\\\"\" >> $$CONFIGFILE &&
@@ -271,6 +310,7 @@ unix:!macx {
     conf.commands += echo \"$$LITERAL_HASH define RGBSCRIPTDIR \\\"$$INSTALLROOT/$$RGBSCRIPTDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define USERRGBSCRIPTDIR \\\"$$USERRGBSCRIPTDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define GOBODIR \\\"$$INSTALLROOT/$$GOBODIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define WEBFILESDIR \\\"$$INSTALLROOT/$$WEBFILESDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH endif\" >> $$CONFIGFILE
 }
 win32 {
@@ -285,6 +325,8 @@ win32 {
     conf.commands += @echo $$LITERAL_HASH define USERINPUTPROFILEDIR \"$$USERINPUTPROFILEDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define MIDITEMPLATEDIR \"$$MIDITEMPLATEDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define USERMIDITEMPLATEDIR \"$$USERMIDITEMPLATEDIR\" >> $$CONFIGFILE &&
+    conf.commands += @echo $$LITERAL_HASH define MODIFIERSTEMPLATEDIR \"$$MODIFIERSTEMPLATEDIR\" >> $$CONFIGFILE &&
+    conf.commands += @echo $$LITERAL_HASH define USERMODIFIERSTEMPLATEDIR \"$$USERMODIFIERSTEMPLATEDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define FIXTUREDIR \"$$FIXTUREDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define USERFIXTUREDIR \"$$USERFIXTUREDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define PLUGINDIR \"$$PLUGINDIR\" >> $$CONFIGFILE &&
@@ -292,5 +334,6 @@ win32 {
     conf.commands += @echo $$LITERAL_HASH define RGBSCRIPTDIR \"$$RGBSCRIPTDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define USERRGBSCRIPTDIR \"$$USERRGBSCRIPTDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH define GOBODIR \"$$GOBODIR\" >> $$CONFIGFILE &&
+    conf.commands += @echo $$LITERAL_HASH define WEBFILESDIR \"$$WEBFILESDIR\" >> $$CONFIGFILE &&
     conf.commands += @echo $$LITERAL_HASH endif >> $$CONFIGFILE
 }

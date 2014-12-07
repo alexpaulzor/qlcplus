@@ -37,28 +37,22 @@ class E131Controller : public QObject
 public:
     enum Type { Unknown = 0x0, Input = 0x01, Output = 0x02 };
 
-    E131Controller(QString ipaddr, QList<QNetworkAddressEntry> interfaces,
-                     QList<QString>macAddrList, Type type, QObject *parent = 0);
+    E131Controller(QString ipaddr, QString macAddress,
+                   Type type, quint32 line, QObject *parent = 0);
 
     ~E131Controller();
 
     /** Send DMX data to a specific port/universe */
-    void sendDmx(const int& universe, const QByteArray& data);
+    void sendDmx(const quint32 universe, const QByteArray& data);
 
     /** Return the controller IP address */
     QString getNetworkIP();
 
-    /** add an output port to this controller (in DMX words, a universe */
-    void addUniverse(quint32 line, int uni);
-
-    /** Returns the number of universes managed by this controller */
-    int getUniversesNumber();
-
-    /** Remove a universe managed by this controller */
-    bool removeUniverse(int uni);
+    /** Set the controller type */
+    void setType(Type type);
 
     /** Get the type of this controller */
-    int getType();
+    Type type();
 
     /** Get the number of packets sent by this controller */
     quint64 getPacketSentNumber();
@@ -66,13 +60,19 @@ public:
     /** Get the number of packets received by this controller */
     quint64 getPacketReceivedNumber();
 
+    /** Increase or decrease the reference count of the given type */
+    void changeReferenceCount(Type type, int amount);
+
+    /** Retrieve the reference count of the given type */
+    int referenceCount(Type type);
+
 private:
     /** The controller IP address as QHostAddress */
     QHostAddress m_ipAddr;
 
     /** The controller multicast addresses map as QHostAddress */
     /** This is where all E131 packets are sent to */
-    QHash<int, QHostAddress> m_multicastAddr;
+    QHash<quint32, QHostAddress> m_multicastAddr;
 
     /** The controller interface MAC address. Used only for ArtPollReply */
     QString m_MACAddress;
@@ -80,13 +80,12 @@ private:
     quint64 m_packetSent;
     quint64 m_packetReceived;
 
-    /** List of universes managed by this controller */
-    /** Coupled as universe/QLC+ line */
-    QHash<int, quint32> m_universes;
-
     /** Type of this controller */
     /** A controller can be only output or only input */
     Type m_type;
+
+    /** QLC+ line to be used when emitting a signal */
+    quint32 m_line;
 
     /** The UDP socket used to send/receive E131 packets */
     QUdpSocket *m_UdpSocket;
@@ -98,12 +97,18 @@ private:
     /** It holds values for a whole 4 universes address (512 * 4) */
     QByteArray m_dmxValues;
 
+    /** Count the number of input universes using this controller */
+    int m_inputRefCount;
+
+    /** Count the number of output universes using this controller */
+    int m_outputRefCount;
+
 private slots:
     /** Async event raised when new packets have been received */
     void processPendingPackets();
 
 signals:
-    void valueChanged(quint32 input, int channel, uchar value);
+    void valueChanged(quint32 universe, quint32 input, quint32 channel, uchar value);
 };
 
 #endif
